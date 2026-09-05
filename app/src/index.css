@@ -1,0 +1,28 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  color-scheme: dark;
+  --bg: #0A0B0D;
+  --bg-1: #101216;
+  --bg-2: #15171C;
+  --line: rgba(245,243,238,.09);
+  --line-2: rgba(245,243,238,.16);
+  --ink: #F3F1EA;
+  --ink-2: rgba(243,241,234,.66);
+  --ink-3: rgba(243,241,234,.40);
+  --gold: #C9A15A;
+  --good: #4FBE8A;
+  --warn: #E0AA52;
+  --bad: #E0715F;
+}
+
+body {
+  font-family: 'Work Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+#root { min-height: 100vh; }
+
+input, select, button { font-family: inherit; }

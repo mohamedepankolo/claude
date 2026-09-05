@@ -1,0 +1,37 @@
+const DECISION_LABEL = { approve: 'Crédit accordable', review: 'À examiner de plus près', reject: 'Crédit non recommandé' }
+
+export default function ResultPanel({ dossier }) {
+  if (!dossier) return null
+  const explanations = dossier.explanations ?? []
+
+  return (
+    <div className="card">
+      <div className={`verdict verdict-${dossier.decision}`}>
+        <div className="verdict-title">{DECISION_LABEL[dossier.decision] ?? dossier.decision}</div>
+        <div className="verdict-sub">{dossier.client_name} · {dossier.purpose} · demande de {Number(dossier.amount_requested).toLocaleString('fr-FR')} FCFA sur {dossier.duration} mois</div>
+        <div className="verdict-figs">
+          <div><strong>{dossier.score}</strong><span>score /100</span></div>
+          <div><strong>{Number(dossier.recommended_amount).toLocaleString('fr-FR')}</strong><span>soutenable FCFA</span></div>
+          <div><strong>{Math.round((dossier.confidence ?? 0) * 100)}%</strong><span>confiance</span></div>
+        </div>
+      </div>
+
+      <h3>Facteurs de la décision</h3>
+      <div className="reasons">
+        {explanations.map((r) => (
+          <div key={r.code} className={`reason reason-${r.direction}`}>
+            <span className="reason-tag">{r.direction === 'favorable' ? '+' : '−'}</span>
+            <div className="reason-body">
+              <div className="reason-label">{r.label}</div>
+              <div className="reason-detail">{r.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className={`sync-badge sync-${dossier.sync_status}`}>
+        {dossier.sync_status === 'synced' ? 'Synchronisé' : dossier.sync_status === 'failed' ? 'Échec de synchronisation' : 'En attente de synchronisation'}
+      </div>
+    </div>
+  )
+}
