@@ -21,7 +21,13 @@
 
 export const DEFAULT_TAUX_USURE = 0.24 // PLACEHOLDER — à confirmer, voir le commentaire ci-dessus
 
-function monthlyPayment(principal, monthlyRate, n) {
+/**
+ * Mensualité d'un prêt amorti à mensualités constantes. Exportée pour être
+ * réutilisée par @finance/computeViability (même hypothèse d'amortissement,
+ * cohérence entre le TEG et l'estimation de rentabilité) — les deux moteurs
+ * restent néanmoins des sorties séparées, jamais fusionnées.
+ */
+export function monthlyPayment(principal, monthlyRate, n) {
   if (monthlyRate === 0) return principal / n
   return (principal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n))
 }

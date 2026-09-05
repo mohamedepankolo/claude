@@ -15,3 +15,9 @@ db.version(1).stores({
   regulatory_results: 'id, application_id, created_at',
   sync_queue: 'id, status, entity_type, created_at',
 })
+
+// v2 : ajout du résultat du 4ᵉ moteur (Profitability/Viability Engine),
+// séparé de `regulatory_results` par principe (TEG ≠ rentabilité).
+db.version(2).stores({
+  viability_results: 'id, application_id, created_at',
+})

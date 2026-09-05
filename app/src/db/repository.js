@@ -73,6 +73,19 @@ export async function saveRegulatoryResult(applicationId, regResult) {
   return id
 }
 
+/** Enregistre le résultat du moteur de rentabilité pour un dossier — cf. @finance/computeViability. */
+export async function saveViabilityResult(applicationId, viabilityResult) {
+  const id = uuid()
+  await db.viability_results.add({
+    id, application_id: applicationId,
+    revenus: viabilityResult.revenus, couts: viabilityResult.couts, marge: viabilityResult.marge,
+    marge_pct: viabilityResult.marge_pct, viable: viabilityResult.viable,
+    detail: viabilityResult.detail, params: viabilityResult.params, created_at: now(),
+  })
+  await enqueueSync('viability_results', id, 'create')
+  return id
+}
+
 /** Liste les dossiers avec leur dernier score/décision connus, du plus récent au plus ancien. */
 export async function listApplications() {
   const [apps, clients, scores, decisions] = await Promise.all([
@@ -100,11 +113,12 @@ export async function listApplications() {
 export async function getApplication(applicationId) {
   const app = await db.credit_applications.get(applicationId)
   if (!app) return null
-  const [client, score, decision, regulatory] = await Promise.all([
+  const [client, score, decision, regulatory, viability] = await Promise.all([
     db.clients.get(app.client_id),
     db.credit_scores.where('application_id').equals(applicationId).first(),
     db.credit_decisions.where('application_id').equals(applicationId).first(),
     db.regulatory_results.where('application_id').equals(applicationId).last(),
+    db.viability_results.where('application_id').equals(applicationId).last(),
   ])
   return {
     ...app,
@@ -114,6 +128,7 @@ export async function getApplication(applicationId) {
     narrative: score?.narrative ?? [],
     decision: decision?.decision, reason: decision?.reason,
     regulatory: regulatory ?? null,
+    viability: viability ?? null,
   }
 }
 

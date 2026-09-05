@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
-import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, listApplications, getApplication, listSyncQueue } from './db/index.js'
+import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, saveViabilityResult, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
 import RegulatoryPanel from './components/RegulatoryPanel.jsx'
+import ViabilityPanel from './components/ViabilityPanel.jsx'
 import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -87,6 +88,13 @@ export default function App() {
     if (navigator.onLine) await runSync()
   }
 
+  async function handleComputeViability(viabilityResult) {
+    if (!selectedId) return
+    await saveViabilityResult(selectedId, viabilityResult)
+    setSelected(await getApplication(selectedId))
+    if (navigator.onLine) await runSync()
+  }
+
   async function runSync() {
     setSyncing(true)
     try {
@@ -125,6 +133,7 @@ export default function App() {
           <>
             <ResultPanel dossier={selected} />
             <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
+            <ViabilityPanel dossier={selected} onCompute={handleComputeViability} />
             <RegulatoryAssistant />
             <ChatPanel dossier={selected} />
           </>

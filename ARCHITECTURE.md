@@ -50,10 +50,12 @@ Lory structure l'application en 4 moteurs séparés. État d'avancement :
    à un plafond configurable. **Déterministe, jamais piloté par le LLM**
    (règle d'architecture #2 de Lory). Le plafond par défaut (24%) est un
    **placeholder** à remplacer par le taux d'usure BCEAO confirmé.
-4. **Profitability/Viability Engine** ⏳ — pas encore construit. Estimera la
-   marge de l'institution (coûts de ressources/opérationnels/du risque/technologiques
-   vs revenus du crédit), **toujours séparée du TEG** (principe non-négociable :
-   un coût interne comme le coût du LLM ne doit jamais gonfler le TEG réglementaire).
+4. **Profitability/Viability Engine** ✅ — `finance/computeViability.mjs` : estime
+   la marge de l'institution sur un crédit (revenus d'intérêts + frais, moins
+   les coûts de ressources/opérationnels/du risque/technologiques), **toujours
+   séparée du TEG** (principe non-négociable : un coût interne comme le coût
+   du LLM ne doit jamais gonfler le TEG réglementaire). Les 4 moteurs de
+   l'architecture de Lory sont désormais tous construits.
 
 ## 2. Le contrat de scoring (OUTPUT stable)
 
@@ -155,9 +157,32 @@ Testé de bout en bout avec un faux serveur imitant l'API `llama-server`
 basculent automatiquement sur le LLM dès qu'il répond, et retombent
 proprement sur les règles/passages bruts sinon.
 
+## 6bis. Le moteur de rentabilité (finance/) ✅
+
+`finance/computeViability.mjs` — 4ᵉ et dernier moteur métier de l'architecture
+de Lory. Réutilise la même hypothèse d'amortissement que `regulatory/computeTEG.mjs`
+(`monthlyPayment`, exportée pour l'occasion) pour rester cohérent entre les
+deux calculs, mais produit une sortie strictement séparée :
+
+- **INPUT** : les termes du crédit (`montant_demande`, `duree_mois`,
+  `taux_nominal_annuel_pct`, `frais_dossier`) + `probabilite_defaut` — fournie
+  par l'appelant (`(100 - dossier.score) / 100`, dérivée du contrat de scoring
+  sans jamais importer `@scoring` directement, pour garder les moteurs découplés).
+- **OUTPUT** : `{ revenus, couts, marge, marge_pct, viable, detail, params }` —
+  jamais de champ `teg` ni `compliant` (testé explicitement, cf.
+  `finance/computeViability.test.mjs`).
+- **Paramètres économiques** (`DEFAULT_PARAMS`) : coût des ressources (6%/an),
+  coût opérationnel (5% du montant), perte en cas de défaut (LGD, 60%), coût
+  technologique fixe par dossier (500 FCFA — le coût du LLM/serveur est ici,
+  jamais dans le TEG), marge minimale (5%) — tous des **placeholders**
+  documentés, comme `DEFAULT_TAUX_USURE`, à confirmer par la direction financière.
+- `app/src/components/ViabilityPanel.jsx` (aliasé `@finance`) : affiché juste
+  après le panneau TEG (étape 7 du scénario de démo de Lory), persisté dans
+  IndexedDB (`viability_results`, `db.version(2)`), testé de bout en bout
+  (Playwright) y compris la persistance après rechargement de page.
+
 ## 7. Ce qui reste à faire
 
-- **Profitability/Viability Engine** — le seul des 4 moteurs pas encore construit.
 - Brancher un vrai adapter Firestore (config du projet Firebase de l'équipe).
 - Confirmer avec Prisca/le texte BCEAO le vrai taux d'usure (le plafond TEG
   actuel, 24%, est un placeholder documenté dans `regulatory/computeTEG.mjs`).

@@ -25,9 +25,10 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 
 - `src/db/db.js` — définition de la base IndexedDB (Dexie) : `clients`,
   `credit_applications`, `credit_scores`, `credit_decisions`,
-  `regulatory_results` (résultat TEG), `sync_queue`. Colonnes de
-  `credit_applications` alignées sur les variables réelles validées par
-  Prisca. `genre` est stocké (audit d'équité) mais jamais transmis au scoring.
+  `regulatory_results` (résultat TEG), `viability_results` (résultat
+  rentabilité), `sync_queue`. Colonnes de `credit_applications` alignées sur
+  les variables réelles validées par Prisca. `genre` est stocké (audit
+  d'équité) mais jamais transmis au scoring.
 - `src/db/repository.js` — couche d'accès (création dossier, lecture,
   historique, file de synchronisation), API asynchrone (Dexie/IndexedDB).
 - `../scoring/scoreCreditApplication.mjs` (aliasé `@scoring`) — **le
@@ -37,7 +38,13 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   réglementaire** : calcule le TEG d'un crédit et sa conformité à un plafond
   configurable (taux d'usure — valeur par défaut = placeholder à confirmer,
   cf. commentaire en tête du fichier). Déterministe, jamais piloté par le LLM
-  (règle d'architecture #2 de Lory). Séparé du calcul de rentabilité (à venir).
+  (règle d'architecture #2 de Lory). Strictement séparé du calcul de rentabilité.
+- `../finance/computeViability.mjs` (aliasé `@finance`) — **le moteur de
+  rentabilité** : marge de l'institution sur un crédit (revenus d'intérêts et
+  de frais moins coûts de ressources/opérationnels/du risque/technologiques),
+  à partir de la probabilité de défaut du dossier (`(100 - score) / 100`).
+  Paramètres économiques configurables, tous des placeholders documentés
+  (cf. commentaire en tête du fichier). Jamais fusionné avec le TEG.
 - `src/sync/syncService.js` — file de synchronisation (P1). Ne bloque jamais
   la saisie, conserve les erreurs, permet le retry, évite les doublons (UUID
   stables), état visible (pending/synced/failed). **Utilise un adapter
@@ -50,7 +57,8 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   du TEG, politique de crédit), recherche lexicale sur un petit corpus
   contrôlé, réponse toujours accompagnée de ses sources.
 - `src/components/` — formulaire de dossier, panneau de résultat, panneau
-  TEG ("Simuler le crédit"), assistant réglementaire (RAG), chatbox dossier,
+  TEG ("Simuler le crédit"), panneau de rentabilité ("Rentabilité pour
+  l'institution"), assistant réglementaire (RAG), chatbox dossier,
   sidebar (historique + connexion).
 
 ## Ce qui est fait
@@ -63,17 +71,19 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] Contrat de scoring défini, intégré, adossé à un modèle entraîné et évalué
 - [x] Montant recommandé, décision suggérée, reason codes
 - [x] **Moteur TEG** : simulation du crédit, conformité au plafond, affichage séparé du score de risque
+- [x] **Moteur de rentabilité** : marge de l'institution, séparée du TEG, persistée dans IndexedDB
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
 - [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
-- [x] Testé de bout en bout (formulaire → score → TEG → RAG → affichage), y compris
+- [x] Testé de bout en bout (formulaire → score → TEG → rentabilité → RAG → affichage), y compris
       un scénario hors ligne réel (dossier créé sans connexion, synchronisé
       automatiquement à la reconnexion) et le branchement LLM (vérifié avec
       un faux serveur imitant l'API `llama-server`)
 
 ## Ce qui reste (cf. plan de Lory)
 
-- **Profitability/Viability Engine** : marge de l'institution (coûts vs
-  revenus du crédit), séparée du TEG par principe — le seul des 4 moteurs pas encore construit.
+Les 4 moteurs métier de l'architecture de Lory sont désormais tous construits.
+Ce qui reste :
+
 - Brancher un vrai adapter Firebase (Firestore) à la place de `mockRemoteAdapter`.
 - Confirmer la valeur réelle du taux d'usure (plafond TEG) avec Prisca / le
   texte BCEAO applicable, à la place du placeholder actuel (24%).
