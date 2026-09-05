@@ -1,24 +1,25 @@
 const DECISION_LABEL = { approve: 'Accordé', review: 'À examiner', reject: 'Refusé' }
 
-export default function Sidebar({ isOnline, applications, selectedId, onSelect, onNew, pendingCount, syncing, onSyncNow }) {
+export default function Sidebar({ isOnline, applications, selectedId, onSelect, onNew, pendingCount, syncing, onSyncNow, theme, onToggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-name">Baraka Score</div>
-        <div className="brand-tag">Scoring microcrédit — prototype React/IndexedDB/Firebase</div>
+        <div className="brand-tag">Scoring microcrédit explicable<br />CIF · Projet DigiCoop-WA+</div>
       </div>
 
-      <button className="nav-item" onClick={onNew}>+ Nouveau dossier</button>
-
-      <div className={`conn-status conn-${isOnline ? 'online' : 'offline'}`}>
-        <span className="dot" /> {isOnline ? 'En ligne' : 'Hors ligne'}
-        {pendingCount > 0 && <span className="pending-count">{pendingCount} en attente</span>}
+      <div className="side-block">
+        <button className="nav-item" onClick={onNew}>+ Nouveau dossier</button>
+        <div className={`conn-status conn-${isOnline ? 'online' : 'offline'}`}>
+          <span className="dot" /> {isOnline ? 'En ligne' : 'Hors ligne'}
+          {pendingCount > 0 && <span className="pending-count">{pendingCount} en attente</span>}
+        </div>
+        {isOnline && pendingCount > 0 && (
+          <button className="nav-item" onClick={onSyncNow} disabled={syncing} style={{ marginTop: 8 }}>
+            {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
+          </button>
+        )}
       </div>
-      {isOnline && pendingCount > 0 && (
-        <button className="nav-item" onClick={onSyncNow} disabled={syncing}>
-          {syncing ? 'Synchronisation…' : 'Synchroniser maintenant'}
-        </button>
-      )}
 
       <div className="side-label">Dossiers</div>
       <div className="dossiers">
@@ -32,6 +33,13 @@ export default function Sidebar({ isOnline, applications, selectedId, onSelect, 
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="side-foot">
+        <span style={{ fontSize: 11.5, color: 'var(--side-ink-3)' }}>Baraka Score</span>
+        <button type="button" className="theme-toggle" onClick={onToggleTheme}>
+          {theme === 'dark' ? '☀ Clair' : '☾ Sombre'}
+        </button>
       </div>
     </aside>
   )

@@ -13,6 +13,12 @@
  *  - `politique-credit-fictive` : un document métier FICTIF, explicitement
  *    demandé comme tel par l'architecture de Lory ("1-2 documents métier
  *    fictifs (politique/procédure de crédit)").
+ *  - `sources-officielles-lbc-ft` : liens RÉELS (slide officielle du
+ *    hackathon "Sources officielles", vérifiés le 5 septembre 2026) vers
+ *    les textes BCEAO/UEMOA/GIABA/ONU applicables en LBC/FT et à la
+ *    réglementation des SFD. On ne recopie jamais le contenu de ces textes
+ *    (même principe que `taux-usure-a-completer` : jamais de contenu
+ *    juridique fabriqué) — seulement où les trouver, avec la source exacte.
  */
 
 export const CORPUS = [
@@ -63,6 +69,27 @@ Cas des primo-demandeurs (cold start) : en l'absence d'historique de crédit int
 Garanties : une caution personnelle est acceptée si sa solidité (capacité financière du garant) est jugée suffisante. Une garantie matérielle qui se déprécie dans le temps (véhicule) justifie un examen plus prudent qu'une garantie qui conserve ou prend de la valeur (parcelle, foncier).
 
 Révision : toute décision automatisée reste soumise à validation humaine. L'agent peut à tout moment surclasser ou déclasser une recommandation (agent_override), à condition de motiver sa décision dans la fiche de décision.
+    `.trim(),
+  },
+  {
+    id: 'sources-officielles-lbc-ft',
+    title: 'Sources officielles — LBC/FT et réglementation des SFD (liens vérifiés)',
+    text: `
+Ce document liste où trouver les textes réglementaires réels applicables à la lutte contre le blanchiment de capitaux et le financement du terrorisme (LBC/FT), et à la réglementation des systèmes financiers décentralisés (SFD, microfinance) — pas leur contenu. Sources publiques BCEAO, UEMOA, GIABA et Nations unies, adresses vérifiées le 5 septembre 2026.
+
+BCEAO — LBC/FT : tous les textes en vigueur (loi uniforme, directives, instructions d'application). www.bceao.int/fr/reglementations/lutte-contre-le-blanchiment-de-capitaux-et-le-financement-du-terrorisme
+
+Loi uniforme LBC/FT/FP : le texte de référence, adopté le 31 mars 2023 par le Conseil des Ministres de l'UMOA. www.bceao.int/fr/reglementations/loi-uniforme-relative-la-lutte-contre-le-blanchiment-de-capitaux-le-financement-du
+
+Directive 02/2015/CM/UEMOA : le socle régional du dispositif, adopté le 2 juillet 2015. www.bceao.int/sites/default/files/2017-11/directive_no02_2015_cm_uemoa_lbc_ft-2.pdf
+
+BCEAO — réglementation des SFD : loi portant réglementation des systèmes financiers décentralisés, instructions comptables et prudentielles. www.bceao.int/fr/reglementations/reglementation-des-systemes-financiers-decentralises
+
+GIABA : l'organisme régional de type GAFI (Groupe d'Action Financière) pour l'Afrique de l'Ouest. www.giaba.org
+
+ONU — liste consolidée des sanctions : la liste du Conseil de sécurité contre laquelle un filtrage (screening) se compare avant d'engager une relation avec un client. scsanctions.un.org/consolidated — export exploitable en XML : scsanctions.un.org/resources/xml/en/consolidated.xml
+
+Ce document ne remplace ni le taux d'usure applicable (cf. \`taux-usure-a-completer\`, un sujet distinct — plafond du TEG, pas LBC/FT) ni un vrai contrôle de conformité : c'est un point de départ pour trouver le texte exact, jamais une synthèse de son contenu.
     `.trim(),
   },
 ]

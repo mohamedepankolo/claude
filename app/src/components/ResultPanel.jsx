@@ -1,4 +1,5 @@
 const DECISION_LABEL = { approve: 'Crédit accordable', review: 'À examiner de plus près', reject: 'Crédit non recommandé' }
+const DECISION_ICON = { approve: '✓', review: '!', reject: '✕' }
 
 export default function ResultPanel({ dossier }) {
   if (!dossier) return null
@@ -8,12 +9,15 @@ export default function ResultPanel({ dossier }) {
   return (
     <div className="card">
       <div className={`verdict verdict-${dossier.decision}`}>
-        <div className="verdict-title">{DECISION_LABEL[dossier.decision] ?? dossier.decision}</div>
-        <div className="verdict-sub">{dossier.client_name} · {dossier.secteur?.replace(/_/g, ' ')} · demande de {Number(dossier.montant_demande).toLocaleString('fr-FR')} FCFA sur {dossier.duree_mois} mois</div>
-        <div className="verdict-figs">
-          <div><strong>{dossier.score}</strong><span>score /100</span></div>
-          <div><strong>{Number(dossier.recommended_amount).toLocaleString('fr-FR')}</strong><span>soutenable FCFA</span></div>
-          <div><strong>{Math.round((dossier.confidence ?? 0) * 100)}%</strong><span>confiance</span></div>
+        <div className="verdict-icon">{DECISION_ICON[dossier.decision] ?? '?'}</div>
+        <div className="verdict-body">
+          <div className="verdict-title">{DECISION_LABEL[dossier.decision] ?? dossier.decision}</div>
+          <div className="verdict-sub">{dossier.client_name} · {dossier.secteur?.replace(/_/g, ' ')} · demande de {Number(dossier.montant_demande).toLocaleString('fr-FR')} FCFA sur {dossier.duree_mois} mois</div>
+          <div className="verdict-figs">
+            <div><strong>{dossier.score}</strong><span>score /100</span></div>
+            <div><strong>{Number(dossier.recommended_amount).toLocaleString('fr-FR')}</strong><span>soutenable FCFA</span></div>
+            <div><strong>{Math.round((dossier.confidence ?? 0) * 100)}%</strong><span>confiance</span></div>
+          </div>
         </div>
       </div>
 

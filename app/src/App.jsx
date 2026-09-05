@@ -4,9 +4,8 @@ import { applyBusinessGuardrails } from '@scoring/applyBusinessGuardrails.mjs'
 import { initDb, createApplication, saveScoreAndDecision, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
-import DossierForm from './components/DossierForm.jsx'
-import DocumentImportPanel from './components/DocumentImportPanel.jsx'
-import AudioInterviewPanel from './components/AudioInterviewPanel.jsx'
+import { useTheme } from './hooks/useTheme.js'
+import SourceTabs from './components/SourceTabs.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
 import DecisionExplanationPanel from './components/DecisionExplanationPanel.jsx'
 import ExternalChecksPanel from './components/ExternalChecksPanel.jsx'
@@ -66,6 +65,7 @@ export default function App() {
   const [prefill, setPrefill] = useState(null)
   const [prefillVersion, setPrefillVersion] = useState(0)
   const isOnline = useOnlineStatus()
+  const { theme, toggleTheme } = useTheme()
 
   // Ouverture de la base locale (IndexedDB via Dexie) au démarrage.
   useEffect(() => {
@@ -184,24 +184,38 @@ export default function App() {
         pendingCount={pendingCount}
         syncing={syncing}
         onSyncNow={runSync}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <main className="main">
-        {showForm && (
-          <>
-            <DocumentImportPanel onExtracted={handleExtracted} />
-            <AudioInterviewPanel onExtracted={handleExtracted} />
-            <DossierForm key={prefillVersion} onSubmit={handleSubmit} submitting={submitting} prefill={prefill} />
-          </>
-        )}
-        {!showForm && (
-          <>
-            <ResultPanel dossier={selected} />
-            <DecisionExplanationPanel dossier={selected} />
-            <ExternalChecksPanel dossier={selected} onReevaluate={handleReevaluateWithExternalCheck} />
-            <RegulatoryAssistant />
-            <ChatPanel dossier={selected} />
-          </>
-        )}
+        <div className="topbar">
+          <div>
+            <div className="topbar-title">{showForm ? 'Nouveau dossier de crédit' : selected?.client_name}</div>
+            <div className="topbar-sub">Scoring microcrédit — assistant à la décision, pas décideur automatique</div>
+          </div>
+          <div className="topbar-spacer" />
+          <div className="topbar-badge">CIF · DigiCoop-WA+</div>
+        </div>
+        <div className="content">
+          {showForm && (
+            <SourceTabs
+              onSubmit={handleSubmit}
+              submitting={submitting}
+              prefill={prefill}
+              prefillVersion={prefillVersion}
+              onExtracted={handleExtracted}
+            />
+          )}
+          {!showForm && (
+            <>
+              <ResultPanel dossier={selected} />
+              <DecisionExplanationPanel dossier={selected} />
+              <ExternalChecksPanel dossier={selected} onReevaluate={handleReevaluateWithExternalCheck} />
+              <RegulatoryAssistant />
+              <ChatPanel dossier={selected} />
+            </>
+          )}
+        </div>
       </main>
     </div>
   )

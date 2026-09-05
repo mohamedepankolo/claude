@@ -1,9 +1,9 @@
 # Baraka Score — interface, documents & entretien
 
-Capture fidèle de la demande du 5 septembre. **Mise à jour** : 4 des 5
-chantiers ci-dessous sont maintenant construits et testés (cf. §7bis) — seule
-la refonte visuelle complète (§6) reste non commencée, sur demande explicite
-("on reviendra là-dessus").
+Capture fidèle de la demande du 5 septembre. **Mise à jour** : les 5
+chantiers sont maintenant construits et testés (cf. §7bis et §9) — y compris
+la refonte visuelle (§6), une fois la maquette de référence
+(`index-light.html`) reçue.
 
 ## 1. BIC — facultatif, avec un bouton pour passer
 
@@ -160,5 +160,46 @@ de composants différente. **Pas commencé** — l'utilisateur a lui-même dit
 4. Audio → transcription → extraction — code fait, **vérification réelle en
    attente** du modèle Whisper + `whisper-server` sur la machine de démo
    (cf. §4 pour le lien et le dossier où le mettre).
-5. Refonte visuelle complète — non commencée, sur demande explicite
-   ("on reviendra là-dessus").
+5. ~~Refonte visuelle complète~~ — fait (cf. §9).
+
+## 9. Refonte visuelle (5 septembre, suite) ✅
+
+Maquette de référence reçue : `index-light.html` (identique au fichier déjà
+dans le dépôt) — palette claire, accent bleu (#4F6BF4), sidebar sombre,
+typographie Newsreader (titres) + Work Sans (corps), cartes avec ombre douce,
+verdict/reason-cards, chat card, onglets Formulaire/Documents/Audio.
+
+Appliqué à l'app React (pas une réécriture des composants, un ré-habillage
++ quelques ajouts structurels) :
+
+- **Tokens de thème dupliqués clair/sombre** dans `src/index.css` (`:root`
+  = palette claire par défaut, `:root[data-theme="dark"]` = override) —
+  mêmes noms de variables CSS qu'avant (`--bg-1`, `--ink`, `--gold`...),
+  donc la quasi-totalité des composants existants a hérité du nouveau look
+  sans modification.
+- **Bascule clair/sombre** : `src/hooks/useTheme.js` (persisté en
+  `localStorage`), bouton dans le pied de la sidebar (`Sidebar.jsx`), et un
+  petit script inline dans `index.html` qui applique le thème sauvegardé
+  avant le premier rendu React (évite un flash du mauvais thème).
+- **`SourceTabs.jsx`** (nouveau) : reprend la structure à onglets de la
+  maquette (Formulaire / Documents / Entretien audio) dans une seule carte
+  "Informations du dossier", au lieu de trois cartes empilées. Les trois
+  panneaux restent montés (juste masqués en CSS) en changeant d'onglet,
+  pour ne jamais perdre une saisie manuelle en cours en allant importer un
+  document — vérifié explicitement par un test (remplir le nom, aller sur
+  l'onglet Documents, revenir sur Formulaire : le nom est toujours là).
+- **Topbar** ajouté dans `App.jsx` (titre = nom du dossier ou "Nouveau
+  dossier de crédit", sous-titre, badge CIF), verdict card avec icône
+  ✓/!/✕, et les facteurs de décision transformés en cartes avec liseré de
+  couleur (favorable/défavorable/garde-fou) — même esprit visuel que la
+  maquette, sans reprendre l'interaction "replier/déplier" (non essentielle,
+  gardée simple pour ne pas complexifier `ResultPanel.jsx` sans vrai besoin).
+- Vérifié en clair et en sombre (captures d'écran) + suite de tests
+  unitaires (43/43) + parcours Playwright complet (création de dossier,
+  changement de thème persistant après rechargement, onglets).
+
+**Non repris de la maquette, par choix délibéré (pas un oubli)** : la fiche
+d'engagement / génération de contrat PDF imprimable (`genererContrat()`
+dans la maquette) et le téléchargement de la fiche de décision — fonctions
+de démonstration dans le prototype HTML d'origine, jamais demandées pour
+l'app React ; à ajouter si besoin, mais hors du périmètre de cette passe.

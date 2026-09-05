@@ -145,7 +145,6 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
 
   return (
     <form className="card" onSubmit={handleSubmit}>
-      <h2>Nouveau dossier</h2>
       {prefill && Object.keys(prefill).length > 0 && (
         <div className="import-banner">
           {Object.keys(prefill).length} champ(s) pré-rempli(s) depuis le document importé — vérifiez et corrigez

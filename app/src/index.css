@@ -1,28 +1,88 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Design tokens — palette claire par défaut (référence : index-light.html,
+   choisie par l'équipe), palette sombre en override sous [data-theme="dark"]
+   ou prefers-color-scheme quand l'utilisateur n'a rien choisi explicitement.
+   Bascule pilotée par src/hooks/useTheme.js (persistée en localStorage). */
 :root {
+  color-scheme: light;
+  --bg: #FFFFFF;
+  --bg-1: #FFFFFF;
+  --bg-2: #F7F8FA;
+  --bg-3: #EEF1F5;
+  --line: #E8EAED;
+  --line-2: #D1D5DB;
+  --ink: #111318;
+  --ink-2: #4B5563;
+  --ink-3: #9CA3AF;
+  --gold: #4F6BF4;
+  --gold-ink: #FFFFFF;
+  --gold-soft: rgba(79,107,244,.08);
+  --gold-line: rgba(79,107,244,.35);
+  --good: #16A34A;
+  --good-soft: #F0FDF4;
+  --good-line: #BBF7D0;
+  --warn: #D97706;
+  --warn-soft: #FFFBEB;
+  --warn-line: #FDE68A;
+  --bad: #DC2626;
+  --bad-soft: #FEF2F2;
+  --bad-line: #FCA5A5;
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Work Sans', system-ui, sans-serif;
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+  --shadow: 0 1px 3px rgba(17,19,24,.06), 0 1px 2px rgba(17,19,24,.04), 0 10px 24px -14px rgba(17,19,24,.12);
+
+  /* La sidebar reste sombre dans les deux thèmes (contraste voulu, comme la référence). */
+  --side-bg: #111318;
+  --side-line: rgba(255,255,255,.08);
+  --side-hover: #1E2128;
+  --side-ink: #FFFFFF;
+  --side-ink-2: rgba(255,255,255,.66);
+  --side-ink-3: rgba(255,255,255,.38);
+  --side-active-bg: rgba(79,107,244,.22);
+  --side-active-line: rgba(79,107,244,.5);
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #0A0B0D;
   --bg-1: #101216;
   --bg-2: #15171C;
+  --bg-3: #1B1E24;
   --line: rgba(245,243,238,.09);
   --line-2: rgba(245,243,238,.16);
   --ink: #F3F1EA;
   --ink-2: rgba(243,241,234,.66);
   --ink-3: rgba(243,241,234,.40);
-  --gold: #C9A15A;
+  --gold: #6C8AFF;
+  --gold-ink: #0A0B0D;
+  --gold-soft: rgba(108,138,255,.14);
+  --gold-line: rgba(108,138,255,.4);
   --good: #4FBE8A;
+  --good-soft: rgba(79,190,138,.12);
+  --good-line: rgba(79,190,138,.35);
   --warn: #E0AA52;
+  --warn-soft: rgba(224,170,82,.12);
+  --warn-line: rgba(224,170,82,.35);
   --bad: #E0715F;
+  --bad-soft: rgba(224,113,95,.12);
+  --bad-line: rgba(224,113,95,.35);
+  --shadow: 0 1px 3px rgba(0,0,0,.3), 0 10px 24px -14px rgba(0,0,0,.5);
+  --side-bg: #08090B;
+  --side-hover: #1A1C21;
 }
 
 body {
-  font-family: 'Work Sans', system-ui, sans-serif;
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--ink);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root { min-height: 100vh; }
 
-input, select, button { font-family: inherit; }
+input, select, button, textarea { font-family: inherit; }

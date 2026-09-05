@@ -92,6 +92,7 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] **Import de dossier scanné (PDF)** : extraction de texte → extraction de paramètres par LLM → pré-remplissage du formulaire → relecture avant validation
 - [x] **BIC facultatif** : bouton "Passer cette étape", import du rapport (PDF) ou saisie manuelle, ré-évaluation des garde-fous sans toucher au score ML
 - [x] **Entretien audio → transcription → extraction** (code complet, testé avec un micro simulé ; vérification avec un vrai `whisper-server` à faire sur la machine de démo)
+- [x] **Interface redessinée** (maquette `../index-light.html`) : thème clair/sombre bascule, cartes avec ombre, onglets Formulaire/Documents/Audio, verdict/facteurs de décision restylés
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
 - [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
 - [x] Testé de bout en bout (formulaire → score → TEG → rentabilité → RAG → affichage), y compris
@@ -107,7 +108,5 @@ Ce qui reste :
 - Brancher un vrai adapter Firebase (Firestore) à la place de `mockRemoteAdapter`.
 - Confirmer la valeur réelle du taux d'usure (plafond TEG) avec Prisca / le
   texte BCEAO applicable, à la place du placeholder actuel (24%).
-- Démarrer `llama-server` avec le modèle GGUF sur la machine de démo.
-- Reprendre le style visuel de `index-light.html` (choisi par l'équipe) dans
-  l'app React (actuellement volontairement minimal, cf. directive de Lory :
-  "ne cherchez pas la beauté finale ; cherchez le parcours complet minimal").
+- Démarrer `llama-server` (et `whisper-server` pour l'audio) avec les
+  modèles GGUF/GGML sur la machine de démo — cf. `PLAN_INTERFACE_DOCUMENTS.md` §4.
