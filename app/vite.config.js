@@ -15,6 +15,7 @@ export default defineConfig({
       // testés indépendamment (node --test) — une seule source de vérité.
       '@scoring': path.resolve(__dirname, '../scoring'),
       '@regulatory': path.resolve(__dirname, '../regulatory'),
+      '@rag': path.resolve(__dirname, '../rag'),
     },
   },
   server: {

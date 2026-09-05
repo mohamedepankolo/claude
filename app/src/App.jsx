@@ -6,6 +6,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
 import RegulatoryPanel from './components/RegulatoryPanel.jsx'
+import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import './App.css'
@@ -124,6 +125,7 @@ export default function App() {
           <>
             <ResultPanel dossier={selected} />
             <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
+            <RegulatoryAssistant />
             <ChatPanel dossier={selected} />
           </>
         )}

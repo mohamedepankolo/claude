@@ -127,18 +127,37 @@ règles déterministes qui **recalculent de vraies simulations** via
 Lory : *"si le modèle complet tombe, utiliser un modèle de secours prévalidé,
 ne jamais inventer un résultat."*
 
-**Ce chat n'est pas le RAG documentaire décrit par Lory dans sa v2**
-(corpus PDF réglementaire → chunks → embeddings → vector store → recherche →
-LLM → réponse sourcée). Notre chat actuel injecte les données du *dossier*
-dans le prompt ; le RAG de Lory répondra sur la *réglementation* (taux
-d'usure, règles de calcul TEG, politique de crédit) avec citation de source.
-Les deux sont complémentaires, pas redondants — le RAG documentaire reste à
-construire (Priorité 3 du plan de Lory).
+**Ce chat n'est pas le RAG documentaire** — les deux sont complémentaires :
+`ChatPanel.jsx` répond sur les données du *dossier* (chiffre d'affaires,
+score, facteurs...), `RegulatoryAssistant.jsx` répond sur la
+*réglementation et la politique de crédit*, avec citation systématique de
+sa source (étape 8 du scénario de démo de Lory : *"Poser au RAG : Pourquoi ?
+→ réponse sourcée"*).
 
-## 6. Ce qui reste à faire
+## 6. Le RAG documentaire (rag/) ✅
 
-- **Profitability/Viability Engine** — moteur 4/4, pas encore construit.
-- **RAG documentaire** — corpus contrôlé + pipeline embeddings/recherche (Priorité 3).
+Corpus contrôlé de 3 documents courts (`rag/corpus.mjs`) :
+- **Méthode de calcul du TEG** — contenu réel, documente notre propre moteur (`regulatory/computeTEG.mjs`).
+- **Taux d'usure — canevas à compléter** — volontairement PAS un texte réglementaire inventé : une liste de ce que le vrai texte BCEAO doit préciser, à remplacer avant toute présentation officielle.
+- **Politique de crédit interne** — document **fictif**, explicitement demandé comme tel par l'architecture de Lory.
+
+Recherche par scoring lexical (TF-IDF, `rag/retrieve.mjs`) plutôt qu'une
+base vectorielle : suffisant et fiable pour un corpus de cette taille,
+cohérent avec la note de Lory ("pour les données structurées, utiliser
+SQL/agrégations plutôt que de tout transformer en vecteurs"). Un vrai vector
+store reste l'évolution naturelle si le corpus grossit en production.
+
+`app/src/rag/ragClient.js` récupère les passages pertinents, les envoie au
+LLM local avec instruction de citer sa source ; si le LLM est indisponible,
+les passages bruts sont affichés tels quels (jamais de texte inventé).
+Testé de bout en bout avec un faux serveur imitant l'API `llama-server`
+(cf. `llm/README.md`, section CORS) : le chat et l'assistant réglementaire
+basculent automatiquement sur le LLM dès qu'il répond, et retombent
+proprement sur les règles/passages bruts sinon.
+
+## 7. Ce qui reste à faire
+
+- **Profitability/Viability Engine** — le seul des 4 moteurs pas encore construit.
 - Brancher un vrai adapter Firestore (config du projet Firebase de l'équipe).
 - Confirmer avec Prisca/le texte BCEAO le vrai taux d'usure (le plafond TEG
   actuel, 24%, est un placeholder documenté dans `regulatory/computeTEG.mjs`).

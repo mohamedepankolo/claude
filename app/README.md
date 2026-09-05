@@ -43,10 +43,15 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   stables), état visible (pending/synced/failed). **Utilise un adapter
   simulé (`mockRemoteAdapter`)** en attendant la config Firebase du projet.
 - `src/llm/llmClient.js` + `src/llm/fallbackResponder.js` — assistant en
-  langage naturel (explication reformulée, chatbox), avec repli déterministe
-  si le LLM local n'est pas démarré.
+  langage naturel sur le *dossier* (explication reformulée, chatbox), avec
+  repli déterministe si le LLM local n'est pas démarré.
+- `../rag/corpus.mjs` + `../rag/retrieve.mjs` (aliasés `@rag`) + `src/rag/ragClient.js`
+  — assistant RAG sur la *réglementation* (taux d'usure, méthode de calcul
+  du TEG, politique de crédit), recherche lexicale sur un petit corpus
+  contrôlé, réponse toujours accompagnée de ses sources.
 - `src/components/` — formulaire de dossier, panneau de résultat, panneau
-  TEG ("Simuler le crédit"), chatbox, sidebar (historique + connexion).
+  TEG ("Simuler le crédit"), assistant réglementaire (RAG), chatbox dossier,
+  sidebar (historique + connexion).
 
 ## Ce qui est fait
 
@@ -59,17 +64,16 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] Montant recommandé, décision suggérée, reason codes
 - [x] **Moteur TEG** : simulation du crédit, conformité au plafond, affichage séparé du score de risque
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
-- [x] Testé de bout en bout (formulaire → score → TEG → affichage), y compris
+- [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
+- [x] Testé de bout en bout (formulaire → score → TEG → RAG → affichage), y compris
       un scénario hors ligne réel (dossier créé sans connexion, synchronisé
-      automatiquement à la reconnexion)
+      automatiquement à la reconnexion) et le branchement LLM (vérifié avec
+      un faux serveur imitant l'API `llama-server`)
 
 ## Ce qui reste (cf. plan de Lory)
 
 - **Profitability/Viability Engine** : marge de l'institution (coûts vs
-  revenus du crédit), séparée du TEG par principe.
-- **RAG documentaire** : corpus contrôlé (texte BCEAO taux d'usure, règle de
-  calcul TEG, politique de crédit fictive) + pipeline embeddings/recherche/
-  réponse sourcée — différent du chat actuel qui ne connaît que le dossier.
+  revenus du crédit), séparée du TEG par principe — le seul des 4 moteurs pas encore construit.
 - Brancher un vrai adapter Firebase (Firestore) à la place de `mockRemoteAdapter`.
 - Confirmer la valeur réelle du taux d'usure (plafond TEG) avec Prisca / le
   texte BCEAO applicable, à la place du placeholder actuel (24%).

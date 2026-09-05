@@ -44,7 +44,8 @@ contexte ci-dessous. N'invente jamais une donnée absente. Si tu ne peux pas
 répondre avec les informations données, dis-le explicitement plutôt que de
 deviner. Rappelle si utile que l'outil assiste l'agent, il ne décide pas à sa place.`
 
-async function chatCompletion(messages) {
+/** Exporté pour réutilisation par d'autres clients (cf. src/rag/ragClient.js). */
+export async function chatCompletion(messages) {
   const res = await withTimeout(
     (signal) => fetch(`${BASE_URL}/v1/chat/completions`, {
       method: 'POST',

@@ -34,6 +34,21 @@ sous Windows/Mac/Linux.
 4. L'app (`app/.env.local`, voir `app/.env.example`) pointe déjà vers
    `http://127.0.0.1:8090` par défaut — rien à changer si vous gardez ce port.
 
+## Vérifié : le branchement React ↔ serveur local fonctionne
+
+Testé de bout en bout avec un faux serveur imitant l'API `llama-server`
+(même routes `/health` et `/v1/chat/completions`) : dès que le serveur
+répond, le chat de l'app bascule automatiquement dessus ("assistant local
+actif" au lieu de "mode de repli"). Un point a été nécessaire pour que ça
+marche : le serveur doit répondre avec un en-tête
+`Access-Control-Allow-Origin: *` (CORS), sinon le navigateur bloque
+silencieusement l'appel depuis `localhost:5173` (ou le port du `npm run dev`)
+vers `localhost:8090` — deux origines différentes du point de vue du
+navigateur. `llama-server` l'envoie par défaut sur ses versions récentes ;
+si le chat reste bloqué en "mode de repli" alors que le serveur tourne,
+vérifiez d'abord ce point (`curl -i http://127.0.0.1:8090/health` doit
+montrer l'en-tête `Access-Control-Allow-Origin`).
+
 ## Si le serveur n'est pas démarré / le modèle est absent
 
 `app/src/llm/llmClient.js` fait un health-check avant chaque appel et
