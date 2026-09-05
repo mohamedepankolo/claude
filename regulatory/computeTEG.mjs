@@ -62,23 +62,35 @@ function solveMonthlyEffectiveRate(payment, n, amountReceived) {
  * @param {number} [input.taux_nominal_annuel_pct]  Taux d'intérêt nominal annuel déclaré, en % (ex. 18 pour 18%)
  * @param {number} [input.frais_dossier]            Frais/commissions prélevés à l'octroi, FCFA
  * @param {number} [input.plafond]                  Taux d'usure applicable, fraction (ex. 0.24) — sinon DEFAULT_TAUX_USURE
- * @returns {{ mensualite:number, teg:number, plafond:number, compliant:boolean, taux_nominal_annuel:number, frais_dossier:number }}
+ * @returns {{ mensualite:number, teg:number, plafond:number, compliant:boolean, taux_nominal_annuel:number, frais_dossier:number, valide:boolean }}
  */
 export function computeTEG(input) {
   const {
     montant_demande,
     duree_mois,
-    taux_nominal_annuel_pct = 0,
-    frais_dossier = 0,
-    plafond = DEFAULT_TAUX_USURE,
+    taux_nominal_annuel_pct,
+    frais_dossier,
+    plafond,
   } = input ?? {}
 
   if (!(montant_demande > 0)) throw new TypeError('computeTEG: montant_demande requis (> 0)')
   if (!(duree_mois > 0)) throw new TypeError('computeTEG: duree_mois requis (> 0)')
 
-  const tauxMensuelNominal = taux_nominal_annuel_pct / 100 / 12
+  // Lory, Architecture Rev.2 section 7 : "Afficher «contrôle non validé» si
+  // la règle applicable ou les frais nécessaires ne sont pas renseignés."
+  // `valide` distingue "taux/plafond explicitement fournis" de "calculé sur
+  // des valeurs par défaut (0%, pas de frais, plafond placeholder)" — un
+  // TEG à 0% affiché comme "conforme" serait trompeur si personne n'a en
+  // réalité renseigné le taux du crédit.
+  const valide = taux_nominal_annuel_pct !== undefined && taux_nominal_annuel_pct !== null && plafond !== undefined && plafond !== null
+
+  const tauxRetenu = taux_nominal_annuel_pct ?? 0
+  const fraisRetenus = frais_dossier ?? 0
+  const plafondRetenu = plafond ?? DEFAULT_TAUX_USURE
+
+  const tauxMensuelNominal = tauxRetenu / 100 / 12
   const mensualite = monthlyPayment(montant_demande, tauxMensuelNominal, duree_mois)
-  const montantPercu = Math.max(0, montant_demande - frais_dossier)
+  const montantPercu = Math.max(0, montant_demande - fraisRetenus)
 
   const tauxMensuelEffectif = solveMonthlyEffectiveRate(mensualite, duree_mois, montantPercu)
   const teg = Math.pow(1 + tauxMensuelEffectif, 12) - 1
@@ -86,9 +98,10 @@ export function computeTEG(input) {
   return {
     mensualite: Math.round(mensualite),
     teg: Math.round(teg * 10000) / 10000,
-    plafond,
-    compliant: teg <= plafond,
-    taux_nominal_annuel: taux_nominal_annuel_pct,
-    frais_dossier,
+    valide,
+    plafond: plafondRetenu,
+    compliant: teg <= plafondRetenu,
+    taux_nominal_annuel: tauxRetenu,
+    frais_dossier: fraisRetenus,
   }
 }

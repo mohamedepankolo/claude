@@ -177,7 +177,11 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
             </select>
           </label>
           <label>Ancienneté de l'activité (mois, min. 6)
-            <input type="number" min="6" value={form.anciennete_activite_mois} onChange={set('anciennete_activite_mois')} />
+            {/* Pas de contrainte HTML `min` ici volontairement : une valeur
+                sous le seuil doit être bloquée par @scoring/checkAbstention
+                avec une explication claire, pas par une bulle de validation
+                du navigateur qui ne dit rien du pourquoi métier. */}
+            <input type="number" min="0" value={form.anciennete_activite_mois} onChange={set('anciennete_activite_mois')} />
           </label>
           <label>Personnes à charge <input type="number" min="0" value={form.personnes_a_charge} onChange={set('personnes_a_charge')} /></label>
           <label className="checkline"><input type="checkbox" checked={form.informel} onChange={set('informel')} /> Activité informelle</label>

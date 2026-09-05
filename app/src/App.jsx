@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
 import { applyBusinessGuardrails } from '@scoring/applyBusinessGuardrails.mjs'
 import { assessDossierQuality } from '@scoring/assessDossierQuality.mjs'
-import { initDb, createApplication, saveScoreAndDecision, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
+import { checkAbstention } from '@scoring/checkAbstention.mjs'
+import { initDb, createApplication, saveScoreAndDecision, saveAbstention, hasOtherApplicationForClient, purgeOldSyncedApplications, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import { useTheme } from './hooks/useTheme.js'
@@ -68,9 +69,13 @@ export default function App() {
   const isOnline = useOnlineStatus()
   const { theme, toggleTheme } = useTheme()
 
-  // Ouverture de la base locale (IndexedDB via Dexie) au démarrage.
+  // Ouverture de la base locale (IndexedDB via Dexie) au démarrage, puis
+  // purge des dossiers déjà synchronisés au-delà de la durée de rétention
+  // (Lory, Architecture Rev.2 §6 : "limiter les dossiers conservés... prévoir
+  // une stratégie de purge") — jamais un dossier pas encore synchronisé.
   useEffect(() => {
-    initDb().then(() => {
+    initDb().then(async () => {
+      await purgeOldSyncedApplications()
       setDbReady(true)
       refresh()
     })
@@ -112,6 +117,20 @@ export default function App() {
     try {
       const fields = normalizeBooleans(rawFields)
       const applicationId = await createApplication(fields)
+
+      // Contrôle qualité en amont (Lory, Architecture Rev.2 §3) : si des
+      // informations critiques manquent ou que le dossier sort du domaine
+      // couvert par le modèle, on n'appelle PAS scoreCreditApplication —
+      // ni un chiffre inventé, ni une décision sur un dossier hors-cadre.
+      const { abstention, motifs } = checkAbstention(fields)
+      if (abstention) {
+        await saveAbstention(applicationId, motifs)
+        await refresh()
+        await handleSelect(applicationId)
+        if (navigator.onLine) await runSync()
+        return
+      }
+
       const scoreResult = scoreCreditApplication({ application_id: applicationId, ...fields })
 
       // Garde-fous métier (PLAN_RISQUE.md, P0/P1/P2) : appliqués APRÈS le
@@ -161,6 +180,23 @@ export default function App() {
     await refresh()
     setSelected(await getApplication(selectedId))
     if (navigator.onLine) await runSync()
+  }
+
+  // Reprend un dossier en abstention pour le compléter : réouvre le
+  // formulaire pré-rempli avec ce qui a déjà été saisi (même mécanisme que
+  // l'import de document/audio), plutôt que de tout ressaisir.
+  function handleCompleteAbstention() {
+    if (!selected) return
+    // Reconstruit un objet "prefill" propre plutôt que de réutiliser `selected`
+    // tel quel : les cases à cocher sont stockées normalisées en 0/1
+    // (cf. normalizeBooleans) et DossierForm attend de vrais booléens JS
+    // pour `checked={...}` — une chaîne "0" serait sinon rendue cochée.
+    const boolKeys = ['informel', 'participe_tontine', 'a_historique', 'deja_impaye', 'a_caution']
+    const fields = { ...selected, clientName: selected.client_name }
+    for (const k of boolKeys) fields[k] = Boolean(selected[k])
+    setPrefill(fields)
+    setPrefillVersion((v) => v + 1)
+    setShowForm(true)
   }
 
   async function runSync() {
@@ -216,7 +252,10 @@ export default function App() {
               onExtracted={handleExtracted}
             />
           )}
-          {!showForm && (
+          {!showForm && selected?.decision === 'abstention' && (
+            <ResultPanel dossier={selected} onCompleteAbstention={handleCompleteAbstention} />
+          )}
+          {!showForm && selected && selected.decision !== 'abstention' && (
             <>
               <ResultPanel dossier={selected} />
               <DecisionExplanationPanel dossier={selected} />

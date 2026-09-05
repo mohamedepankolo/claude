@@ -120,5 +120,7 @@
   "metrics": {
     "roc_auc": 0.8299,
     "brier_score": 0.0918
-  }
+  },
+  "random_state": 42,
+  "data_file": "data/donnees_completes.csv"
 }

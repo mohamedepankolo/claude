@@ -7,6 +7,13 @@ import { db } from './db.js'
 
 const now = () => new Date().toISOString()
 
+// Durée de conservation par défaut des dossiers en local — Lory, Architecture
+// Rev.2 section 6 : "Stockage local : limiter les dossiers conservés ;
+// prévoir protection du terminal, verrouillage et purge." Placeholder
+// documenté (comme DEFAULT_TAUX_USURE) : la durée réelle doit être définie
+// par l'institution, pas devinée ici.
+export const DEFAULT_RETENTION_DAYS = 90
+
 async function enqueueSync(entityType, entityId, operation) {
   await db.sync_queue.add({
     id: uuid(), entity_type: entityType, entity_id: entityId, operation,
@@ -73,6 +80,22 @@ export async function addExternalCreditCheck(applicationId, { source, montant_de
 export async function listExternalCreditChecks(applicationId) {
   const rows = await db.external_credit_checks.where('application_id').equals(applicationId).toArray()
   return rows.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+}
+
+/**
+ * Enregistre une abstention (@scoring/checkAbstention) : le dossier n'a
+ * jamais été scoré, ni par manque d'informations critiques, ni parce qu'il
+ * sort du domaine couvert par le modèle. Décision distincte de
+ * approve/review/reject — cf. ResultPanel.jsx pour son affichage dédié.
+ */
+export async function saveAbstention(applicationId, motifs) {
+  const decisionId = uuid()
+  await db.credit_decisions.add({
+    id: decisionId, application_id: applicationId, decision: 'abstention',
+    reason: motifs[0] ?? null, motifs, agent_override: null, guardrails: [], created_at: now(),
+  })
+  await enqueueSync('credit_decisions', decisionId, 'create')
+  return decisionId
 }
 
 /** Enregistre le résultat du scoring (contrat @scoring/scoreCreditApplication) pour un dossier. */
@@ -183,6 +206,7 @@ export async function getApplication(applicationId) {
     recommended_amount: score?.recommended_amount, explanations: score?.explanations ?? [],
     narrative: score?.narrative ?? [],
     decision: decision?.decision, reason: decision?.reason, guardrails: decision?.guardrails ?? [],
+    motifs_abstention: decision?.motifs ?? [],
     regulatory: regulatory ?? null,
     viability: viability ?? null,
   }
@@ -204,4 +228,32 @@ export async function markSyncQueueItem(id, status, error) {
 
 export async function markApplicationSynced(applicationId, status) {
   await db.credit_applications.update(applicationId, { sync_status: status, updated_at: now() })
+}
+
+/**
+ * Purge les dossiers locaux déjà synchronisés et plus vieux que la durée de
+ * rétention — jamais un dossier `pending`/`failed` (on ne perd jamais une
+ * saisie non encore confirmée côté serveur). Cf. `DEFAULT_RETENTION_DAYS` :
+ * une politique par défaut documentée, pas encore la valeur validée par une
+ * institution réelle. Retourne le nombre de dossiers supprimés.
+ */
+export async function purgeOldSyncedApplications(retentionDays = DEFAULT_RETENTION_DAYS) {
+  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString()
+  const toDelete = await db.credit_applications
+    .where('sync_status').equals('synced')
+    .and((a) => a.created_at < cutoff)
+    .toArray()
+
+  for (const app of toDelete) {
+    const id = app.id
+    await Promise.all([
+      db.credit_scores.where('application_id').equals(id).delete(),
+      db.credit_decisions.where('application_id').equals(id).delete(),
+      db.regulatory_results.where('application_id').equals(id).delete(),
+      db.viability_results.where('application_id').equals(id).delete(),
+      db.external_credit_checks.where('application_id').equals(id).delete(),
+    ])
+    await db.credit_applications.delete(id)
+  }
+  return toDelete.length
 }

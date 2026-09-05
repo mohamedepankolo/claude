@@ -176,15 +176,56 @@ transmettre.
   et un dossier agricole à montant disproportionné déclenche les deux
   alertes de cohérence correspondantes.
 
-## Ce qui reste ouvert (pas traité dans cette passe)
+## Deuxième passe — le reste du document traité (même jour)
 
-- Le **contrôle qualité en amont du scoring** (étapes 2-3 du parcours
-  agent) et l'**abstention** (section 3) restent des vides réels : un
-  dossier incomplet est aujourd'hui quand même scoré (avec les nouvelles
-  alertes de fiabilité affichées à côté), jamais bloqué avant l'évaluation
-  ni redirigé vers une demande de complément explicite. La "qualité du
-  dossier" construite ici est un premier pas (elle rend visible ce qui
-  manque) mais ne bloque rien — à discuter si une vraie abstention doit
-  être ajoutée avant la démo.
-- La fiche de suivi pour Lory (section 14 de son document) n'a pas été
-  préparée — à faire si tu veux la lui transmettre.
+Suite à "oui tout", les points restants identifiés plus haut ont été
+construits :
+
+- **Contrôle qualité en amont + abstention** ✅ — `scoring/checkAbstention.mjs`
+  (nouveau, 9 tests) s'exécute AVANT `scoreCreditApplication` : si un champ
+  critique manque (montant, CA, secteur, durée) ou que le dossier sort du
+  domaine couvert par le modèle (ancienneté d'activité sous le seuil
+  finançable de 6 mois, secteur non entraîné), le scoring n'est jamais
+  appelé. Le dossier reste enregistré avec une décision "abstention"
+  distincte (jamais un chiffre inventé), affiche les motifs précis, et un
+  bouton "Compléter le dossier" réouvre le formulaire pré-rempli avec ce qui
+  a déjà été saisi. Vérifié de bout en bout : un dossier trop jeune est
+  bloqué, complété, puis correctement scoré une fois corrigé. Au passage, la
+  contrainte HTML native `min="6"` sur le champ ancienneté a été retirée :
+  elle bloquait silencieusement la soumission avant même que notre message
+  métier explicite ne puisse s'afficher.
+- **Calibration du modèle** ✅ — `ml/train_model.py` calcule désormais une
+  table de calibration (probabilité prédite vs taux de défaut observé, par
+  quintile sur le jeu de test), ajoutée à `ml/METRICS.md`. Résultat honnête :
+  la calibration est raisonnable sans être parfaite (légère sous-estimation
+  dans les tranches intermédiaires) — normal vu la taille du jeu de test.
+- **Traçabilité** ✅ partiellement — `ml/model.json`/`scoring/model.js`
+  avaient déjà une version, le fichier source et les tailles train/test ; la
+  graine aléatoire (`random_state=42`) est maintenant explicitement tracée
+  dans le modèle exporté. La graine de génération des données synthétiques
+  elles-mêmes reste hors de notre contrôle (processus de Prisca).
+- **TEG "contrôle non validé"** ✅ — `computeTEG` distingue maintenant un
+  taux/plafond explicitement fourni d'une valeur par défaut silencieuse, via
+  un champ `valide`. Le moteur reste testé même si le panneau associé n'est
+  pas affiché actuellement.
+- **Politique de rétention/purge** ✅ — `purgeOldSyncedApplications` supprime
+  les dossiers déjà synchronisés au-delà d'une durée par défaut (90 jours,
+  placeholder documenté comme `DEFAULT_TAUX_USURE`), jamais un dossier pas
+  encore synchronisé. Appelée automatiquement au démarrage de l'app.
+- **Fiche de suivi pour Lory** ✅ — `FICHE_SUIVI_EQUIPE.md`, composant par
+  composant (état, tâche restante, blocage, preuve), dans l'ordre qu'elle a
+  demandé.
+
+## Ce qui reste ouvert malgré tout
+
+- **Chiffrement du stockage local** — non implémenté et assumé comme limite
+  connue. IndexedDB n'est pas chiffré nativement, et une vraie couche de
+  chiffrement (gestion de clés, verrouillage du terminal) est un chantier
+  distinct, pas réalisable de façon fiable dans le temps du hackathon.
+  Documenté honnêtement dans `FICHE_SUIVI_EQUIPE.md` plutôt que passé sous
+  silence.
+- Le pipeline audio (transcription réelle avec un `whisper-server` démarré)
+  reste à vérifier sur la machine de démo — non testable dans cet
+  environnement.
+- La décision sur l'affichage du TEG/de la rentabilité reste celle prise ce
+  jour (retirés) — à reconfirmer avant la présentation si besoin.

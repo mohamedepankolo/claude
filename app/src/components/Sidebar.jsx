@@ -1,4 +1,4 @@
-const DECISION_LABEL = { approve: 'Accordé', review: 'À examiner', reject: 'Refusé' }
+const DECISION_LABEL = { approve: 'Accordé', review: 'À examiner', reject: 'Refusé', abstention: 'À compléter' }
 
 export default function Sidebar({ isOnline, applications, selectedId, onSelect, onNew, pendingCount, syncing, onSyncNow, theme, onToggleTheme }) {
   return (

@@ -1,12 +1,38 @@
-const DECISION_LABEL = { approve: 'Crédit accordable', review: 'À examiner de plus près', reject: 'Crédit non recommandé' }
-const DECISION_ICON = { approve: '✓', review: '!', reject: '✕' }
+const DECISION_LABEL = { approve: 'Crédit accordable', review: 'À examiner de plus près', reject: 'Crédit non recommandé', abstention: 'Analyse impossible en l\'état' }
+const DECISION_ICON = { approve: '✓', review: '!', reject: '✕', abstention: '…' }
 
-export default function ResultPanel({ dossier }) {
+export default function ResultPanel({ dossier, onCompleteAbstention }) {
   if (!dossier) return null
   const explanations = dossier.explanations ?? []
   const guardrails = dossier.guardrails ?? []
   const champsManquants = dossier.champs_manquants ?? []
   const alertes = dossier.alertes ?? []
+
+  // Contrôle qualité en amont (Lory, Architecture Rev.2 §3) : ce dossier n'a
+  // jamais été scoré — pas de facteurs, pas de garde-fous, pas de qualité à
+  // afficher, juste les motifs qui bloquent l'analyse et une invite à compléter.
+  if (dossier.decision === 'abstention') {
+    return (
+      <div className="card">
+        <div className="verdict verdict-abstention">
+          <div className="verdict-icon">{DECISION_ICON.abstention}</div>
+          <div className="verdict-body">
+            <div className="verdict-title">{DECISION_LABEL.abstention}</div>
+            <div className="verdict-sub">{dossier.client_name} · une revue humaine ou un complément d'information est nécessaire avant de pouvoir évaluer ce dossier.</div>
+          </div>
+        </div>
+        <h3>Ce qui bloque l'analyse</h3>
+        <ul className="reliability-list">
+          {(dossier.motifs_abstention ?? []).map((m) => <li key={m}>{m}</li>)}
+        </ul>
+        {onCompleteAbstention && (
+          <button type="button" className="btn-primary" onClick={onCompleteAbstention} style={{ width: 'auto' }}>
+            Compléter le dossier
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="card">

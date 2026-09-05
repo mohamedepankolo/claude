@@ -40,3 +40,19 @@ test('a custom plafond overrides the default ceiling', () => {
   assert.equal(out.plafond, 0.15);
   assert.equal(out.compliant, out.teg <= 0.15);
 });
+
+test('valide is false when taux_nominal_annuel_pct or plafond were never provided (Lory Rev.2 §7: "contrôle non validé")', () => {
+  const noneProvided = computeTEG({ montant_demande: 300000, duree_mois: 12 });
+  assert.equal(noneProvided.valide, false);
+
+  const onlyTaux = computeTEG({ montant_demande: 300000, duree_mois: 12, taux_nominal_annuel_pct: 18 });
+  assert.equal(onlyTaux.valide, false);
+
+  const bothProvided = computeTEG({ montant_demande: 300000, duree_mois: 12, taux_nominal_annuel_pct: 18, plafond: 0.24 });
+  assert.equal(bothProvided.valide, true);
+});
+
+test('an explicit 0% rate is a real, valid input, not treated as "not provided"', () => {
+  const out = computeTEG({ montant_demande: 300000, duree_mois: 12, taux_nominal_annuel_pct: 0, plafond: 0.24 });
+  assert.equal(out.valide, true);
+});

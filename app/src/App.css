@@ -33,6 +33,7 @@
 .pill-approve { background: rgba(22,163,74,.22); color: #4ADE80; }
 .pill-review { background: rgba(217,119,6,.22); color: #FCD34D; }
 .pill-reject { background: rgba(220,38,38,.22); color: #FCA5A5; }
+.pill-abstention { background: rgba(217,119,6,.22); color: #FCD34D; }
 .side-foot { padding: 14px 22px; border-top: 1px solid var(--side-line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .theme-toggle {
   display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--side-line);
@@ -78,6 +79,9 @@ input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--gold); }
 .verdict-approve { background: linear-gradient(180deg, var(--good-soft), transparent 70%); border-color: var(--good-line); }
 .verdict-review { background: linear-gradient(180deg, var(--warn-soft), transparent 70%); border-color: var(--warn-line); }
 .verdict-reject { background: linear-gradient(180deg, var(--bad-soft), transparent 70%); border-color: var(--bad-line); }
+.verdict-abstention { background: linear-gradient(180deg, var(--warn-soft), transparent 70%); border-color: var(--warn-line); }
+.verdict-abstention .verdict-icon { background: var(--warn-soft); color: var(--warn); }
+.verdict-abstention .verdict-title { color: var(--warn); }
 .verdict-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 20px; font-weight: 700; }
 .verdict-approve .verdict-icon { background: var(--good-soft); color: var(--good); }
 .verdict-review .verdict-icon { background: var(--warn-soft); color: var(--warn); }

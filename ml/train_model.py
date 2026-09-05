@@ -96,6 +96,23 @@ def main():
             "taux_defaut_observe": round(float(y_test[mask].mean()), 4) if mask.sum() else None,
         }
 
+    # Calibration (Lory, Architecture Rev.2 section 4 : "Examiner si les
+    # probabilités correspondent aux fréquences simulées") — sur le jeu de
+    # test uniquement, en quintiles de probabilité prédite. Une bonne
+    # calibration signifie que, dans chaque tranche, le taux de défaut
+    # réellement observé est proche de la probabilité moyenne prédite.
+    n_bins = 5
+    order = np.argsort(proba_test)
+    bins = np.array_split(order, n_bins)
+    calibration_rows = []
+    for i, idx in enumerate(bins):
+        calibration_rows.append({
+            "tranche": i + 1,
+            "n": int(len(idx)),
+            "p_moyenne_predite": round(float(proba_test[idx].mean()), 4),
+            "taux_defaut_observe": round(float(y_test.iloc[idx].mean()), 4),
+        })
+
     proba_full = model.predict_proba(scaler.transform(X))[:, 1]
     equity_rows = []
     for col in ["genre", "zone", "secteur", "informel"]:
@@ -124,6 +141,13 @@ def main():
         "secteurs": SECTEURS,
         "thresholds": {"approve_below": thr_approve, "reject_above": thr_reject},
         "metrics": {"roc_auc": round(float(auc), 4), "brier_score": round(float(brier), 4)},
+        # Traçabilité (Lory, Architecture Rev.2 section 4 : "conserver une
+        # graine de génération, une version du jeu et une version du modèle
+        # pour reproduire la démonstration"). La graine de génération des
+        # données synthétiques elle-même appartient au processus de Prisca,
+        # hors de ce dépôt ; ce qui suit trace la partie qu'on contrôle.
+        "random_state": RANDOM_STATE,
+        "data_file": DATA_PATH,
     }
     with open(OUT_PATH, "w", encoding="utf-8") as f:
         json.dump(model_json, f, ensure_ascii=False, indent=2)
@@ -138,6 +162,16 @@ def main():
         f.write(f"| Accorder | p(défaut) < {thr_approve} | {bucket_report['approve']['n']} | {bucket_report['approve']['taux_defaut_observe']} |\n")
         f.write(f"| À examiner | {thr_approve} ≤ p < {thr_reject} | {bucket_report['review']['n']} | {bucket_report['review']['taux_defaut_observe']} |\n")
         f.write(f"| Refuser | p(défaut) ≥ {thr_reject} | {bucket_report['reject']['n']} | {bucket_report['reject']['taux_defaut_observe']} |\n\n")
+        f.write("## Calibration (jeu de test, en quintiles de probabilité prédite)\n\n")
+        f.write("Vérifie que la probabilité prédite correspond à la fréquence de défaut réellement observée "
+                "dans chaque tranche — pas seulement que le modèle discrimine bien (ROC-AUC ci-dessus mesure "
+                "autre chose : le bon ordre relatif des dossiers, pas l'exactitude de la valeur prédite).\n\n")
+        f.write("| Tranche (risque croissant) | N | Probabilité moyenne prédite | Taux de défaut observé |\n|---|---|---|---|\n")
+        for r in calibration_rows:
+            f.write(f"| {r['tranche']}/{n_bins} | {r['n']} | {r['p_moyenne_predite']} | {r['taux_defaut_observe']} |\n")
+        f.write("\n")
+        f.write(f"Graine aléatoire (train/test split + entraînement) : `{RANDOM_STATE}`, fixée pour la reproductibilité de cette démonstration — "
+                "la graine de génération des données synthétiques elles-mêmes relève du processus de Prisca, hors de ce dépôt.\n\n")
         f.write("## Coefficients (log-odds, sur variables standardisées)\n\n")
         f.write("| Variable | Coefficient | Sens |\n|---|---|---|\n")
         for name, c in sorted(coefficients.items(), key=lambda kv: -abs(kv[1])):

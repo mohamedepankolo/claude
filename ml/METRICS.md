@@ -12,6 +12,20 @@
 | À examiner | 0.08 ≤ p < 0.25 | 164 | 0.1829 |
 | Refuser | p(défaut) ≥ 0.25 | 72 | 0.4444 |
 
+## Calibration (jeu de test, en quintiles de probabilité prédite)
+
+Vérifie que la probabilité prédite correspond à la fréquence de défaut réellement observée dans chaque tranche — pas seulement que le modèle discrimine bien (ROC-AUC ci-dessus mesure autre chose : le bon ordre relatif des dossiers, pas l'exactitude de la valeur prédite).
+
+| Tranche (risque croissant) | N | Probabilité moyenne prédite | Taux de défaut observé |
+|---|---|---|---|
+| 1/5 | 120 | 0.0126 | 0.0083 |
+| 2/5 | 120 | 0.029 | 0.0167 |
+| 3/5 | 120 | 0.0565 | 0.0917 |
+| 4/5 | 120 | 0.1106 | 0.1583 |
+| 5/5 | 120 | 0.3462 | 0.3667 |
+
+Graine aléatoire (train/test split + entraînement) : `42`, fixée pour la reproductibilité de cette démonstration — la graine de génération des données synthétiques elles-mêmes relève du processus de Prisca, hors de ce dépôt.
+
 ## Coefficients (log-odds, sur variables standardisées)
 
 | Variable | Coefficient | Sens |
