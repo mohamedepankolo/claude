@@ -62,10 +62,19 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   — assistant RAG sur la *réglementation* (taux d'usure, méthode de calcul
   du TEG, politique de crédit), recherche lexicale sur un petit corpus
   contrôlé, réponse toujours accompagnée de ses sources.
-- `src/components/` — formulaire de dossier, panneau de résultat, panneau
-  TEG ("Simuler le crédit"), panneau de rentabilité ("Rentabilité pour
-  l'institution"), assistant réglementaire (RAG), chatbox dossier,
-  sidebar (historique + connexion).
+- `src/documents/pdfExtract.js` + `src/llm/extractParamsFromText.js` —
+  pipeline d'extraction (PDF → texte, sans modèle ; texte → paramètres
+  structurés, via le LLM local) partagé par l'import de dossier scanné et le
+  rapport BIC. `src/audio/whisperClient.js` — même pipeline en aval d'une
+  transcription audio (`whisper-server`, cf. `PLAN_INTERFACE_DOCUMENTS.md`).
+- `src/components/` — formulaire de dossier (avec pré-remplissage optionnel
+  depuis un document importé), import de dossier scanné (PDF), entretien
+  enregistré (audio), panneau de résultat, **explication de la décision**
+  (générée automatiquement, favorable/défavorable + synthèse LLM),
+  vérification externe (BIC, facultative, PDF ou saisie manuelle), panneau
+  TEG et panneau de rentabilité (moteurs construits, **retirés de
+  l'affichage** sur demande — cf. `PLAN_INTERFACE_DOCUMENTS.md` §7),
+  assistant réglementaire (RAG), chatbox dossier, sidebar.
 
 ## Ce qui est fait
 
@@ -79,6 +88,10 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] **Moteur TEG** : simulation du crédit, conformité au plafond, affichage séparé du score de risque
 - [x] **Moteur de rentabilité** : marge de l'institution, séparée du TEG, persistée dans IndexedDB
 - [x] **Garde-fous métier** (P0/P1/P2, cf. `PLAN_RISQUE.md`) appliqués après le score ML
+- [x] **Explication de la décision générée automatiquement** après le scoring (pas seulement sur demande dans le chat)
+- [x] **Import de dossier scanné (PDF)** : extraction de texte → extraction de paramètres par LLM → pré-remplissage du formulaire → relecture avant validation
+- [x] **BIC facultatif** : bouton "Passer cette étape", import du rapport (PDF) ou saisie manuelle, ré-évaluation des garde-fous sans toucher au score ML
+- [x] **Entretien audio → transcription → extraction** (code complet, testé avec un micro simulé ; vérification avec un vrai `whisper-server` à faire sur la machine de démo)
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
 - [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
 - [x] Testé de bout en bout (formulaire → score → TEG → rentabilité → RAG → affichage), y compris

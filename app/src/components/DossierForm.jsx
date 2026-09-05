@@ -66,8 +66,29 @@ const initial = {
   croissance_ventes_pct: '',
 }
 
-export default function DossierForm({ onSubmit, submitting }) {
-  const [form, setForm] = useState(initial)
+// Fusionne les valeurs pré-remplies par l'import (PDF/audio, cf.
+// DocumentImportPanel.jsx) avec les valeurs par défaut du formulaire — les
+// champs extraits arrivent en types JS natifs (nombre/booléen), les champs
+// du formulaire sont des chaînes contrôlées : on convertit ici, une seule
+// fois, plutôt que dans chaque `<input>`.
+function mergePrefill(base, prefill) {
+  if (!prefill) return base
+  const merged = { ...base }
+  for (const [k, v] of Object.entries(prefill)) {
+    if (v === undefined || v === null || v === '') continue
+    merged[k] = typeof v === 'boolean' ? v : String(v)
+  }
+  // Si des champs d'historique sont extraits, l'agent n'a pas forcément
+  // coché "a un historique" lui-même : on l'active pour que ces champs
+  // restent visibles à la relecture plutôt que masqués silencieusement.
+  if (prefill.nb_credits_anterieurs || prefill.nb_retards || prefill.montant_dernier_credit) {
+    merged.a_historique = true
+  }
+  return merged
+}
+
+export default function DossierForm({ onSubmit, submitting, prefill }) {
+  const [form, setForm] = useState(() => mergePrefill(initial, prefill))
 
   const set = (key) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
@@ -125,6 +146,12 @@ export default function DossierForm({ onSubmit, submitting }) {
   return (
     <form className="card" onSubmit={handleSubmit}>
       <h2>Nouveau dossier</h2>
+      {prefill && Object.keys(prefill).length > 0 && (
+        <div className="import-banner">
+          {Object.keys(prefill).length} champ(s) pré-rempli(s) depuis le document importé — vérifiez et corrigez
+          avant de valider (rien n'est validé automatiquement).
+        </div>
+      )}
 
       <fieldset><legend>Identité &amp; activité</legend>
         <div className="grid2">

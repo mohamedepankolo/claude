@@ -129,8 +129,13 @@ export async function listApplications() {
     db.credit_decisions.toArray(),
   ])
   const clientById = Object.fromEntries(clients.map((c) => [c.id, c]))
-  const scoreByApp = Object.fromEntries(scores.map((s) => [s.application_id, s]))
-  const decisionByApp = Object.fromEntries(decisions.map((d) => [d.application_id, d]))
+  // Trie par date croissante avant de construire les maps : une ré-évaluation
+  // (cf. ExternalChecksPanel "Archiver et relancer l'évaluation") ajoute une
+  // nouvelle ligne plutôt que d'écraser l'ancienne — on veut ici la plus
+  // récente, jamais un ordre arbitraire de lecture IndexedDB.
+  const byCreatedAtAsc = (a, b) => (a.created_at < b.created_at ? -1 : 1)
+  const scoreByApp = Object.fromEntries([...scores].sort(byCreatedAtAsc).map((s) => [s.application_id, s]))
+  const decisionByApp = Object.fromEntries([...decisions].sort(byCreatedAtAsc).map((d) => [d.application_id, d]))
 
   return apps.map((a) => ({
     ...a,
@@ -143,16 +148,26 @@ export async function listApplications() {
   }))
 }
 
+// Dexie's `.last()` on a `.where(field).equals(...)` query orders by primary
+// key (a random UUID here), NOT by insertion time — harmless while there was
+// only ever one row per application, but wrong now that a dossier can be
+// re-scored (cf. ExternalChecksPanel "relancer l'évaluation") or a TEG/
+// viability simulation resubmitted. Sort by `created_at` explicitly instead.
+async function mostRecent(table, applicationId) {
+  const rows = await table.where('application_id').equals(applicationId).sortBy('created_at')
+  return rows.length ? rows[rows.length - 1] : undefined
+}
+
 /** Récupère un dossier complet (application + client + score + décision + résultat réglementaire). */
 export async function getApplication(applicationId) {
   const app = await db.credit_applications.get(applicationId)
   if (!app) return null
   const [client, score, decision, regulatory, viability] = await Promise.all([
     db.clients.get(app.client_id),
-    db.credit_scores.where('application_id').equals(applicationId).first(),
-    db.credit_decisions.where('application_id').equals(applicationId).first(),
-    db.regulatory_results.where('application_id').equals(applicationId).last(),
-    db.viability_results.where('application_id').equals(applicationId).last(),
+    mostRecent(db.credit_scores, applicationId),
+    mostRecent(db.credit_decisions, applicationId),
+    mostRecent(db.regulatory_results, applicationId),
+    mostRecent(db.viability_results, applicationId),
   ])
   return {
     ...app,

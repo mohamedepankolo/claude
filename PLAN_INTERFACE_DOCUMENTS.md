@@ -1,8 +1,9 @@
-# Baraka Score — interface, documents & entretien (plan de travail, non commencé)
+# Baraka Score — interface, documents & entretien
 
-Capture fidèle de la demande du 5 septembre, pour ne rien perdre avant de
-prioriser. **Rien de ce document n'est construit** — c'est une feuille de
-route à discuter, pas un état d'avancement.
+Capture fidèle de la demande du 5 septembre. **Mise à jour** : 4 des 5
+chantiers ci-dessous sont maintenant construits et testés (cf. §7bis) — seule
+la refonte visuelle complète (§6) reste non commencée, sur demande explicite
+("on reviendra là-dessus").
 
 ## 1. BIC — facultatif, avec un bouton pour passer
 
@@ -103,19 +104,61 @@ contenu — pas de copier-coller direct, l'app React actuelle a une structure
 de composants différente. **Pas commencé** — l'utilisateur a lui-même dit
 "on reviendra là-dessus", donc pas traité dans cette passe.
 
-## 7. Ce qui a été fait pendant ce point (pas seulement du texte)
+## 7. Ce qui a été fait au premier point (retrait d'affichage)
 
 - **`RegulatoryPanel` (TEG) et `ViabilityPanel` (rentabilité) retirés de
   l'affichage** dans `App.jsx`, sur demande explicite — les moteurs
   (`regulatory/computeTEG.mjs`, `finance/computeViability.mjs`) et les
   composants restent en place, juste plus rendus. Réversible en une ligne.
 
-## 8. Ce qui reste à décider avant de coder
+## 7bis. Ce qui est construit et testé (5 septembre, suite du même point)
 
-Cinq chantiers distincts, de tailles très différentes (cf. réponse au chat
-pour la discussion de priorité) :
-1. Explication structurée automatique (petit, réutilise l'existant).
-2. BIC facultatif avec bouton "Passer" (petit, modifie `ExternalChecksPanel`).
-3. Upload PDF → extraction → relecture → re-scoring (moyen/gros, nouvelle UI + nouveau code).
-4. Audio → transcription → extraction (gros, nouveau modèle à télécharger + nouveau pipeline).
-5. Refonte visuelle complète (gros, transverse à tout le reste).
+- **Explication structurée automatique** ✅ — `DecisionExplanationPanel.jsx`,
+  affiché juste après `ResultPanel`. Les colonnes "Favorable/Défavorable"
+  restent 100% déterministes (dérivées de `explanations`/`guardrails`,
+  jamais du LLM) ; seule la synthèse en une phrase est confiée au LLM local
+  (réutilise `explainWithLlm`, déjà existant), avec repli déterministe
+  (`narrative[]`) si absent. Se déclenche automatiquement à l'ouverture du
+  dossier, plus besoin de poser une question dans le chat.
+- **BIC facultatif avec bouton "Passer"** ✅ — `ExternalChecksPanel.jsx`
+  affiche désormais explicitement "facultatif", un bouton "Passer cette
+  étape" (repliable/dépliable), et un import de PDF (rapport de solvabilité)
+  qui extrait automatiquement le montant/commentaire avant archivage. Un
+  bouton "Archiver et relancer l'évaluation" recalcule les garde-fous
+  (jamais le score ML) avec l'endettement externe désormais connu, et
+  ajoute une nouvelle ligne d'historique (l'évaluation initiale reste
+  consultable, cf. correctif `.last()` → `mostRecent()` dans
+  `repository.js` : Dexie triait par UUID, pas par date, ce qui aurait
+  silencieusement affiché une ligne au hasard dès qu'un dossier a plus
+  d'une évaluation).
+- **Upload PDF dossier scanné** ✅ — `DocumentImportPanel.jsx` (nouveau,
+  affiché au-dessus du formulaire). Pipeline réel : `documents/pdfExtract.js`
+  (pdf.js, aucun modèle) → `llm/extractParamsFromText.js` (LLM local,
+  JSON strict, clés whitelistées) → pré-remplissage du formulaire habituel
+  (`DossierForm` accepte désormais une prop `prefill`) → relecture/correction
+  manuelle avant validation, exactement comme demandé. Un PDF scanné sans
+  texte sélectionnable est détecté et signalé (l'OCR n'est pas encore
+  branché). Vérifié avec un vrai fichier PDF généré pour le test : le texte
+  est correctement extrait ; sans LLM démarré, le message d'indisponibilité
+  s'affiche proprement (jamais un plantage, jamais un pré-remplissage inventé).
+- **Audio entretien + transcription** ✅ (code complet, **non vérifiable en
+  conditions réelles dans cet environnement** — pas de microphone matériel
+  ni de `whisper-server` disponible ici) — `AudioInterviewPanel.jsx` +
+  `audio/whisperClient.js`. Enregistrement via `MediaRecorder` ou import
+  d'un fichier audio existant, même pipeline d'extraction que le PDF en
+  aval. Testé avec un micro simulé (Playwright/Chromium) : l'enregistrement
+  fonctionne, et en l'absence de `whisper-server` le message d'indisponibilité
+  s'affiche clairement avec un bouton "Réessayer" — jamais de transcription
+  inventée. **Reste à vérifier sur la vraie machine de démo** une fois
+  `whisper-server` démarré avec un modèle réel (cf. §4).
+
+## 8. Ce qui reste
+
+1. ~~Explication structurée automatique~~ — fait.
+2. ~~BIC facultatif avec bouton "Passer"~~ — fait.
+3. ~~Upload PDF → extraction → relecture → re-scoring~~ — fait.
+4. Audio → transcription → extraction — code fait, **vérification réelle en
+   attente** du modèle Whisper + `whisper-server` sur la machine de démo
+   (cf. §4 pour le lien et le dossier où le mettre).
+5. Refonte visuelle complète — non commencée, sur demande explicite
+   ("on reviendra là-dessus").

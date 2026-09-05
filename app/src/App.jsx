@@ -5,7 +5,10 @@ import { initDb, createApplication, saveScoreAndDecision, hasOtherApplicationFor
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
+import DocumentImportPanel from './components/DocumentImportPanel.jsx'
+import AudioInterviewPanel from './components/AudioInterviewPanel.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
+import DecisionExplanationPanel from './components/DecisionExplanationPanel.jsx'
 import ExternalChecksPanel from './components/ExternalChecksPanel.jsx'
 import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
@@ -29,6 +32,28 @@ function normalizeBooleans(fields) {
   return out
 }
 
+// Contexte des garde-fous métier (PLAN_RISQUE.md, P0/P1) : factorisé pour
+// être identique entre la première évaluation (handleSubmit) et une
+// ré-évaluation ultérieure (handleReevaluateWithExternalCheck) — seul
+// `endettement_externe_declare` diffère entre les deux appels.
+function guardrailContext(fields, duplicate_active_client, overrides = {}) {
+  return {
+    montant_demande: fields.montant_demande,
+    revenu_activite: fields.revenu_activite,
+    duree_mois: fields.duree_mois,
+    anciennete_membre_mois: fields.anciennete_membre_mois,
+    endettement_externe_declare: fields.endettement_externe_declare,
+    montant_dernier_credit: fields.montant_dernier_credit,
+    type_credit: fields.type_credit,
+    type_garantie: fields.type_garantie,
+    valeur_garantie: fields.valeur_garantie,
+    pertinence_saisonniere: fields.pertinence_saisonniere,
+    croissance_ventes_pct: fields.croissance_ventes_pct,
+    duplicate_active_client,
+    ...overrides,
+  }
+}
+
 export default function App() {
   const [dbReady, setDbReady] = useState(false)
   const [applications, setApplications] = useState([])
@@ -38,6 +63,8 @@ export default function App() {
   const [syncing, setSyncing] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [showForm, setShowForm] = useState(true)
+  const [prefill, setPrefill] = useState(null)
+  const [prefillVersion, setPrefillVersion] = useState(0)
   const isOnline = useOnlineStatus()
 
   // Ouverture de la base locale (IndexedDB via Dexie) au démarrage.
@@ -67,6 +94,16 @@ export default function App() {
     setSelectedId(null)
     setSelected(null)
     setShowForm(true)
+    setPrefill(null)
+  }
+
+  // Import PDF (DocumentImportPanel) et/ou audio (AudioInterviewPanel)
+  // peuvent tous deux pré-remplir le formulaire — cf. PLAN_INTERFACE_DOCUMENTS.md
+  // §2-3, "cas combiné" : on fusionne plutôt que d'écraser, la dernière
+  // source extraite gagne en cas de champ commun.
+  function handleExtracted(fields) {
+    setPrefill((prev) => ({ ...prev, ...fields }))
+    setPrefillVersion((v) => v + 1) // force DossierForm à se réinitialiser avec le nouveau prefill (cf. `key`)
   }
 
   async function handleSubmit(rawFields) {
@@ -81,20 +118,7 @@ export default function App() {
       // @scoring/applyBusinessGuardrails. La détection de doublon (P2) est
       // une vérification locale (ce navigateur), pas une consultation BIC réelle.
       const duplicate_active_client = await hasOtherApplicationForClient(fields.clientName, applicationId)
-      const result = applyBusinessGuardrails(scoreResult, {
-        montant_demande: fields.montant_demande,
-        revenu_activite: fields.revenu_activite,
-        duree_mois: fields.duree_mois,
-        anciennete_membre_mois: fields.anciennete_membre_mois,
-        endettement_externe_declare: fields.endettement_externe_declare,
-        montant_dernier_credit: fields.montant_dernier_credit,
-        type_credit: fields.type_credit,
-        type_garantie: fields.type_garantie,
-        valeur_garantie: fields.valeur_garantie,
-        pertinence_saisonniere: fields.pertinence_saisonniere,
-        croissance_ventes_pct: fields.croissance_ventes_pct,
-        duplicate_active_client,
-      })
+      const result = applyBusinessGuardrails(scoreResult, guardrailContext(fields, duplicate_active_client))
       await saveScoreAndDecision(applicationId, result)
       await refresh()
       await handleSelect(applicationId)
@@ -105,6 +129,28 @@ export default function App() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Ré-évaluation après ajout d'une vérification externe (BIC), cf.
+  // ExternalChecksPanel "Archiver et relancer l'évaluation" et
+  // PLAN_INTERFACE_DOCUMENTS.md §1. Le score ML est recalculé (fonction pure
+  // du dossier stocké, mêmes entrées => même résultat) puis les garde-fous
+  // sont réappliqués avec l'endettement externe désormais connu — jamais un
+  // ajustement direct du score ou de la décision déjà enregistrée. Le
+  // résultat s'ajoute comme une NOUVELLE ligne (cf. `mostRecent` dans
+  // repository.js) : l'historique de la première évaluation est conservé.
+  async function handleReevaluateWithExternalCheck(endettementExterneDeclare) {
+    if (!selectedId || !selected) return
+    const scoreResult = scoreCreditApplication({ application_id: selectedId, ...selected })
+    const duplicate_active_client = await hasOtherApplicationForClient(selected.client_name, selectedId)
+    const result = applyBusinessGuardrails(
+      scoreResult,
+      guardrailContext(selected, duplicate_active_client, { endettement_externe_declare: endettementExterneDeclare })
+    )
+    await saveScoreAndDecision(selectedId, result)
+    await refresh()
+    setSelected(await getApplication(selectedId))
+    if (navigator.onLine) await runSync()
   }
 
   async function runSync() {
@@ -140,11 +186,18 @@ export default function App() {
         onSyncNow={runSync}
       />
       <main className="main">
-        {showForm && <DossierForm onSubmit={handleSubmit} submitting={submitting} />}
+        {showForm && (
+          <>
+            <DocumentImportPanel onExtracted={handleExtracted} />
+            <AudioInterviewPanel onExtracted={handleExtracted} />
+            <DossierForm key={prefillVersion} onSubmit={handleSubmit} submitting={submitting} prefill={prefill} />
+          </>
+        )}
         {!showForm && (
           <>
             <ResultPanel dossier={selected} />
-            <ExternalChecksPanel dossier={selected} />
+            <DecisionExplanationPanel dossier={selected} />
+            <ExternalChecksPanel dossier={selected} onReevaluate={handleReevaluateWithExternalCheck} />
             <RegulatoryAssistant />
             <ChatPanel dossier={selected} />
           </>
