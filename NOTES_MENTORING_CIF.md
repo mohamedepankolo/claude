@@ -58,3 +58,47 @@ ce qui suit est une reconstruction du sens, pas une citation fiable mot à mot.
   sens est clair) : la CIF ne veut pas "encore une application" déconnectée
   du métier — la valeur attendue est d'aider à résoudre le vrai problème,
   pas de présenter un prototype qui ne répond qu'à ce qu'on imaginait.
+
+## Session 2 — priorités et contraintes d'infrastructure
+
+- **Discipline de scope, le point le plus important de cette session** : le
+  mentor est explicite — *"votre solution doit être de pouvoir faire le
+  scoring seulement. Si vous vous attardez à renseigner les informations,
+  je ne pense pas que vous allez vraiment finir. [...] La compétition va se
+  jouer sur les détails, le nombre de fonctionnalités."* Ne pas investir de
+  temps sur un formulaire d'onboarding élaboré (le compte client est censé
+  déjà exister dans le système) : concentrer l'effort sur la profondeur du
+  moteur de scoring/analyse (explicabilité, cas limites, fonctionnalités
+  d'analyse). Cohérent avec la direction déjà prise (modèle entraîné,
+  explications, audit d'équité, chat) plutôt qu'un formulaire d'intake plus
+  poussé.
+- **Contrainte d'infrastructure confirmée, pas un simple "nice to have"** :
+  la CIF a explicitement quitté le cloud et ne priorise aucune API externe
+  — *"externe, on ne priorise pas, on priorise tout en interne [...] on a
+  quitté le cloud, on n'est plus sur le cloud"* — à cause des coupures
+  réseau fréquentes. L'IA doit pouvoir "apprendre et être indépendante
+  d'Internet". Ça renforce (au niveau organisationnel, pas seulement
+  technique) le choix du LLM local (Mistral/llama-server, aucun appel API
+  cloud) et du scoring 100% local déjà retenus.
+- **BIC (bureau d'information sur le crédit)** : interconnecté aux réseaux
+  sociaux côté CIF, mais ne couvre que les personnes ayant déjà eu un
+  crédit — confirme que le cold start doit reposer sur d'autres signaux
+  (déjà notre approche). Beaucoup d'équipes vont bâtir sur des données
+  type BIC : la différenciation ("plus-value") doit se jouer ailleurs.
+- **Le montant soutenable prime sur le montant demandé** : exemple donné
+  par le mentor — un revenu de 100 000 FCFA/mois ne justifie pas un crédit
+  de 50 millions sur 24 mois ; l'outil doit simuler et proposer ce que le
+  client peut réellement emprunter. C'est exactement le rôle de
+  `recommended_amount` dans notre contrat de scoring.
+- **Variables spécifiques par activité (exemples concrets supplémentaires)** :
+  agriculture → périmètre du champ ; pisciculture → volume en m³. Vient
+  enrichir la piste "modèles/champs spécialisés par secteur" déjà notée en
+  Session 1.
+- **Aucun outil interne existant ne fait le scoring** : le système actuel
+  de la CIF ne fait que le montage et l'impression du dossier de crédit, pas
+  le calcul lui-même, et rien n'est relié. Bon argument de positionnement :
+  la solution comble un vide réel, ce n'est pas une redite d'un outil existant.
+- **Cible produit côté CIF** : passage du desktop (Java Swing, une install
+  par machine) vers du web centralisé (une seule application, moins de
+  maintenance). Prise en main quasi immédiate attendue côté agent (peu de
+  formation).
