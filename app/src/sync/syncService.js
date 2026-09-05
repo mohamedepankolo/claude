@@ -22,7 +22,7 @@
 //     }
 //   }
 
-import { listSyncQueue, markSyncQueueItem, markApplicationSynced, getApplication } from '../db/sqlite.js'
+import { listSyncQueue, markSyncQueueItem, markApplicationSynced, getApplication } from '../db/index.js'
 
 /** Adapter de secours : simule un envoi réseau (à remplacer par Firestore). */
 export const mockRemoteAdapter = {
@@ -38,34 +38,36 @@ export const mockRemoteAdapter = {
  * élément 'pending' ou 'failed' est retenté ; un succès passe l'entité en
  * synced, un échec conserve le statut failed + le message d'erreur pour retry.
  */
-export async function processSyncQueue(db, { isOnline, remoteAdapter = mockRemoteAdapter, onProgress } = {}) {
+export async function processSyncQueue({ isOnline, remoteAdapter = mockRemoteAdapter, onProgress } = {}) {
   if (!isOnline) return { processed: 0, synced: 0, failed: 0 }
 
-  const items = [...listSyncQueue(db, 'pending'), ...listSyncQueue(db, 'failed')]
+  const [pending, failed] = await Promise.all([listSyncQueue('pending'), listSyncQueue('failed')])
+  const items = [...pending, ...failed]
   let synced = 0
-  let failed = 0
+  let failedCount = 0
 
   for (const item of items) {
     try {
-      const record = buildRecordForSync(db, item)
+      const record = await buildRecordForSync(item)
       await remoteAdapter.push(item, record)
-      markSyncQueueItem(db, item.id, 'synced', null)
-      if (item.entity_type === 'credit_applications') markApplicationSynced(db, item.entity_id, 'synced')
+      await markSyncQueueItem(item.id, 'synced', null)
+      if (item.entity_type === 'credit_applications') await markApplicationSynced(item.entity_id, 'synced')
       synced += 1
     } catch (err) {
-      markSyncQueueItem(db, item.id, 'failed', String(err?.message ?? err))
-      if (item.entity_type === 'credit_applications') markApplicationSynced(db, item.entity_id, 'failed')
-      failed += 1
+      await markSyncQueueItem(item.id, 'failed', String(err?.message ?? err))
+      if (item.entity_type === 'credit_applications') await markApplicationSynced(item.entity_id, 'failed')
+      failedCount += 1
     }
-    onProgress?.({ done: synced + failed, total: items.length })
+    onProgress?.({ done: synced + failedCount, total: items.length })
   }
 
-  return { processed: items.length, synced, failed }
+  return { processed: items.length, synced, failed: failedCount }
 }
 
-function buildRecordForSync(db, item) {
-  if (item.entity_type === 'credit_applications') return getApplication(db, item.entity_id)
-  // Les scores/décisions voyagent avec leur dossier ; on renvoie l'identifiant
-  // pour la simulation, un vrai adapter Firestore choisira sa propre forme de document.
+async function buildRecordForSync(item) {
+  if (item.entity_type === 'credit_applications') return getApplication(item.entity_id)
+  // Les scores/décisions/résultats réglementaires voyagent avec leur dossier ;
+  // on renvoie l'identifiant pour la simulation, un vrai adapter Firestore
+  // choisira sa propre forme de document.
   return { entity_type: item.entity_type, entity_id: item.entity_id, operation: item.operation }
 }

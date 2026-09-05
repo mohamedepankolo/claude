@@ -10,9 +10,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Le contrat de scoring vit à la racine du repo (/scoring), partagé
-      // entre la maquette HTML et cette appli — une seule source de vérité.
+      // Le contrat de scoring et le moteur réglementaire vivent à la racine
+      // du repo (/scoring, /regulatory), partagés avec la maquette HTML et
+      // testés indépendamment (node --test) — une seule source de vérité.
       '@scoring': path.resolve(__dirname, '../scoring'),
+      '@regulatory': path.resolve(__dirname, '../regulatory'),
     },
   },
   server: {

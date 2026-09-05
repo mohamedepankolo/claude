@@ -5,7 +5,7 @@ export default function Sidebar({ isOnline, applications, selectedId, onSelect, 
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-name">Baraka Score</div>
-        <div className="brand-tag">Scoring microcrédit — prototype React/SQLite/Firebase</div>
+        <div className="brand-tag">Scoring microcrédit — prototype React/IndexedDB/Firebase</div>
       </div>
 
       <button className="nav-item" onClick={onNew}>+ Nouveau dossier</button>

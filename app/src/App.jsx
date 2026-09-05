@@ -1,17 +1,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
-import { initDb, createApplication, saveScoreAndDecision, listApplications, getApplication, listSyncQueue } from './db/index.js'
+import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
+import RegulatoryPanel from './components/RegulatoryPanel.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import './App.css'
 
-// SQLite (via sql.js) n'a pas de type booléen natif ; les cases à cocher du
-// formulaire arrivent en `true`/`false` JS, on les normalise en 0/1 avant
-// stockage ET avant l'appel au moteur de scoring (contrat 0|1).
+// IndexedDB (Dexie) n'a pas de type booléen natif au sens SQL, et le
+// contrat de scoring attend des 0/1 ; les cases à cocher du formulaire
+// arrivent en `true`/`false` JS, on les normalise avant stockage ET avant
+// l'appel au moteur de scoring.
 function normalizeBooleans(fields) {
   const boolKeys = ['informel', 'participe_tontine', 'a_historique', 'deja_impaye', 'a_caution']
   const out = { ...fields }
@@ -20,7 +22,7 @@ function normalizeBooleans(fields) {
 }
 
 export default function App() {
-  const [db, setDb] = useState(null)
+  const [dbReady, setDbReady] = useState(false)
   const [applications, setApplications] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -30,23 +32,26 @@ export default function App() {
   const [showForm, setShowForm] = useState(true)
   const isOnline = useOnlineStatus()
 
-  // Chargement de la base SQLite locale (sql.js/WASM) au démarrage.
+  // Ouverture de la base locale (IndexedDB via Dexie) au démarrage.
   useEffect(() => {
-    initDb().then((database) => {
-      setDb(database)
-      refresh(database)
+    initDb().then(() => {
+      setDbReady(true)
+      refresh()
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const refresh = useCallback((database) => {
-    const list = listApplications(database)
+  const refresh = useCallback(async () => {
+    const [list, pending, failed] = await Promise.all([
+      listApplications(), listSyncQueue('pending'), listSyncQueue('failed'),
+    ])
     setApplications(list)
-    setPendingCount(listSyncQueue(database, 'pending').length + listSyncQueue(database, 'failed').length)
+    setPendingCount(pending.length + failed.length)
   }, [])
 
-  function handleSelect(id) {
+  async function handleSelect(id) {
     setSelectedId(id)
-    setSelected(getApplication(db, id))
+    setSelected(await getApplication(id))
     setShowForm(false)
   }
 
@@ -60,11 +65,11 @@ export default function App() {
     setSubmitting(true)
     try {
       const fields = normalizeBooleans(rawFields)
-      const applicationId = createApplication(db, fields)
+      const applicationId = await createApplication(fields)
       const result = scoreCreditApplication({ application_id: applicationId, ...fields })
-      saveScoreAndDecision(db, applicationId, result)
-      refresh(db)
-      handleSelect(applicationId)
+      await saveScoreAndDecision(applicationId, result)
+      await refresh()
+      await handleSelect(applicationId)
 
       // P1 : si en ligne, on tente une synchronisation immédiate (sinon
       // l'entrée reste 'pending' dans sync_queue jusqu'à la reconnexion).
@@ -74,12 +79,19 @@ export default function App() {
     }
   }
 
+  async function handleComputeTEG(regResult) {
+    if (!selectedId) return
+    await saveRegulatoryResult(selectedId, regResult)
+    setSelected(await getApplication(selectedId))
+    if (navigator.onLine) await runSync()
+  }
+
   async function runSync() {
     setSyncing(true)
     try {
-      await processSyncQueue(db, { isOnline: navigator.onLine })
-      refresh(db)
-      if (selectedId) setSelected(getApplication(db, selectedId))
+      await processSyncQueue({ isOnline: navigator.onLine })
+      await refresh()
+      if (selectedId) setSelected(await getApplication(selectedId))
     } finally {
       setSyncing(false)
     }
@@ -88,11 +100,11 @@ export default function App() {
   // Dès que la connexion revient, on relance la synchronisation (règle de Lory :
   // "la reconnexion lance/reprend la synchronisation").
   useEffect(() => {
-    if (isOnline && db && pendingCount > 0) runSync()
+    if (isOnline && dbReady && pendingCount > 0) runSync()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline, db])
+  }, [isOnline, dbReady])
 
-  if (!db) return <div className="loading">Initialisation de la base locale…</div>
+  if (!dbReady) return <div className="loading">Initialisation de la base locale…</div>
 
   return (
     <div className="app">
@@ -111,6 +123,7 @@ export default function App() {
         {!showForm && (
           <>
             <ResultPanel dossier={selected} />
+            <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
             <ChatPanel dossier={selected} />
           </>
         )}
