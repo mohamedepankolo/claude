@@ -1,18 +1,22 @@
 import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
 import { applyBusinessGuardrails } from '@scoring/applyBusinessGuardrails.mjs'
-import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, saveViabilityResult, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
+import { initDb, createApplication, saveScoreAndDecision, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
-import RegulatoryPanel from './components/RegulatoryPanel.jsx'
-import ViabilityPanel from './components/ViabilityPanel.jsx'
 import ExternalChecksPanel from './components/ExternalChecksPanel.jsx'
 import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import './App.css'
+
+// RegulatoryPanel (TEG, "Simuler le crédit") et ViabilityPanel (rentabilité
+// pour l'institution) restent construits et testés (regulatory/computeTEG.mjs,
+// finance/computeViability.mjs, app/src/components/{RegulatoryPanel,ViabilityPanel}.jsx)
+// mais sont retirés de l'affichage sur demande explicite — à réactiver plus
+// tard si besoin, rien n'a été supprimé côté moteur.
 
 // IndexedDB (Dexie) n'a pas de type booléen natif au sens SQL, et le
 // contrat de scoring attend des 0/1 ; les cases à cocher du formulaire
@@ -103,20 +107,6 @@ export default function App() {
     }
   }
 
-  async function handleComputeTEG(regResult) {
-    if (!selectedId) return
-    await saveRegulatoryResult(selectedId, regResult)
-    setSelected(await getApplication(selectedId))
-    if (navigator.onLine) await runSync()
-  }
-
-  async function handleComputeViability(viabilityResult) {
-    if (!selectedId) return
-    await saveViabilityResult(selectedId, viabilityResult)
-    setSelected(await getApplication(selectedId))
-    if (navigator.onLine) await runSync()
-  }
-
   async function runSync() {
     setSyncing(true)
     try {
@@ -155,11 +145,6 @@ export default function App() {
           <>
             <ResultPanel dossier={selected} />
             <ExternalChecksPanel dossier={selected} />
-            <ViabilityPanel dossier={selected} onCompute={handleComputeViability} />
-            {/* TEG en fin d'évaluation (retour de Prisca, session 3 : le taux
-                n'est jamais un facteur de risque, seulement une vérification
-                de conformité une fois la décision de risque prise). */}
-            <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
             <RegulatoryAssistant />
             <ChatPanel dossier={selected} />
           </>
