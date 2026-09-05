@@ -1,22 +1,40 @@
 import { useState } from 'react'
 
+const SECTEURS = [
+  ['commerce_detail', 'Commerce de détail'],
+  ['vente_vivres', 'Vente de vivres'],
+  ['quincaillerie_materiaux', 'Quincaillerie / matériaux'],
+  ['services', 'Services'],
+  ['artisanat', 'Artisanat'],
+  ['agriculture', 'Agriculture'],
+]
+
 const initial = {
   clientName: '',
-  purpose: 'commerce',
-  business_age: '',
-  amount_requested: '',
-  duration: '12',
-  income: '',
-  expenses: '',
-  savings: false,
-  guarantee: false,
-  hasPriorCredit: false,
-  incidents_last_12m: '',
-  repayment_rate_pct: '',
-  reputation: 'good',
-  guarantor_strength: 'good',
-  sector_dynamics: 'favorable',
-  agency_distance_km: '',
+  genre: '',
+  age: '',
+  zone: 'urbain',
+  secteur: 'commerce_detail',
+  informel: false,
+  personnes_a_charge: '',
+  anciennete_activite_mois: '',
+  chiffre_affaires: '',
+  charges_activite: '',
+  flux_tresorerie_net: '',
+  charges_perso: '',
+  montant_demande: '',
+  duree_mois: '12',
+  epargne_mensuelle: '',
+  regularite_epargne: '',
+  participe_tontine: false,
+  regularite_tontine: '',
+  a_historique: false,
+  nb_credits_anterieurs: '',
+  nb_retards: '',
+  deja_impaye: false,
+  a_caution: false,
+  capacite_caution: '',
+  score_reputation: '0.7',
 }
 
 export default function DossierForm({ onSubmit, submitting }) {
@@ -26,31 +44,43 @@ export default function DossierForm({ onSubmit, submitting }) {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm((f) => ({ ...f, [key]: val }))
   }
+  const num = (v, fallback = 0) => (v === '' || v === undefined ? fallback : Number(v))
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.clientName || !form.amount_requested) return
+    if (!form.clientName || !form.montant_demande || !form.chiffre_affaires) return
+
+    const chiffre_affaires = num(form.chiffre_affaires)
+    const charges_activite = num(form.charges_activite)
+    const revenu_activite = Math.max(0, chiffre_affaires - charges_activite)
+
     onSubmit({
       clientName: form.clientName,
-      purpose: form.purpose,
-      business_age: Number(form.business_age) || 0,
-      amount_requested: Number(form.amount_requested) || 0,
-      duration: Number(form.duration) || 12,
-      income: Number(form.income) || 0,
-      expenses: Number(form.expenses) || 0,
-      savings: form.savings,
-      guarantee: form.guarantee,
-      extra: {
-        history: form.hasPriorCredit
-          ? { has_prior_credit: true, incidents_last_12m: Number(form.incidents_last_12m) || 0, repayment_rate_pct: Number(form.repayment_rate_pct) || 90 }
-          : { has_prior_credit: false },
-        profile: {
-          reputation: form.reputation,
-          guarantor_strength: form.guarantor_strength,
-          sector_dynamics: form.sector_dynamics,
-          agency_distance_km: Number(form.agency_distance_km) || 2,
-        },
-      },
+      genre: form.genre || null,
+      age: num(form.age, null),
+      zone: form.zone,
+      secteur: form.secteur,
+      informel: form.informel,
+      personnes_a_charge: num(form.personnes_a_charge),
+      anciennete_activite_mois: num(form.anciennete_activite_mois, 6),
+      chiffre_affaires,
+      charges_activite,
+      revenu_activite,
+      flux_tresorerie_net: num(form.flux_tresorerie_net, revenu_activite),
+      charges_perso: num(form.charges_perso),
+      montant_demande: num(form.montant_demande),
+      duree_mois: num(form.duree_mois, 12),
+      epargne_mensuelle: num(form.epargne_mensuelle),
+      regularite_epargne: num(form.regularite_epargne),
+      participe_tontine: form.participe_tontine,
+      regularite_tontine: num(form.regularite_tontine),
+      a_historique: form.a_historique,
+      nb_credits_anterieurs: num(form.nb_credits_anterieurs),
+      nb_retards: num(form.nb_retards),
+      deja_impaye: form.deja_impaye,
+      a_caution: form.a_caution,
+      capacite_caution: num(form.capacite_caution),
+      score_reputation: num(form.score_reputation, 0.5),
     })
     setForm(initial)
   }
@@ -59,69 +89,89 @@ export default function DossierForm({ onSubmit, submitting }) {
     <form className="card" onSubmit={handleSubmit}>
       <h2>Nouveau dossier</h2>
 
-      <div className="grid2">
-        <label>Nom du demandeur
-          <input value={form.clientName} onChange={set('clientName')} placeholder="Nom et prénom(s)" required />
-        </label>
-        <label>Secteur d'activité
-          <select value={form.purpose} onChange={set('purpose')}>
-            <option value="commerce">Commerce</option>
-            <option value="agriculture">Agriculture</option>
-            <option value="services">Services</option>
-            <option value="artisanat">Artisanat</option>
-            <option value="autre">Autre</option>
-          </select>
-        </label>
-        <label>Ancienneté de l'activité (mois)
-          <input type="number" min="0" value={form.business_age} onChange={set('business_age')} />
-        </label>
-        <label>Montant demandé (FCFA)
-          <input type="number" min="0" value={form.amount_requested} onChange={set('amount_requested')} required />
-        </label>
-        <label>Durée (mois)
-          <input type="number" min="1" value={form.duration} onChange={set('duration')} />
-        </label>
-        <label>Capacité mensuelle / revenu (FCFA)
-          <input type="number" min="0" value={form.income} onChange={set('income')} />
-        </label>
-        <label>Charges financières actuelles (FCFA/mois)
-          <input type="number" min="0" value={form.expenses} onChange={set('expenses')} />
-        </label>
-        <label>Proximité de l'agence (km)
-          <input type="number" min="0" value={form.agency_distance_km} onChange={set('agency_distance_km')} />
-        </label>
-      </div>
-
-      <div className="grid2">
-        <label className="checkline"><input type="checkbox" checked={form.savings} onChange={set('savings')} /> Épargne régulière / tontine active</label>
-        <label className="checkline"><input type="checkbox" checked={form.guarantee} onChange={set('guarantee')} /> Caution personnelle déclarée</label>
-        <label>Réputation de terrain
-          <select value={form.reputation} onChange={set('reputation')}>
-            <option value="good">Bonne</option>
-            <option value="average">Moyenne</option>
-            <option value="to_verify">À vérifier</option>
-          </select>
-        </label>
-        <label>Dynamique du secteur
-          <select value={form.sector_dynamics} onChange={set('sector_dynamics')}>
-            <option value="favorable">Favorable</option>
-            <option value="stable">Stable</option>
-            <option value="difficult">Difficile</option>
-          </select>
-        </label>
-      </div>
-
-      <label className="checkline"><input type="checkbox" checked={form.hasPriorCredit} onChange={set('hasPriorCredit')} /> A déjà eu un crédit (sinon : profil primo-demandeur / cold start)</label>
-      {form.hasPriorCredit && (
+      <fieldset><legend>Identité &amp; activité</legend>
         <div className="grid2">
-          <label>Incidents / retards (12 mois)
-            <input type="number" min="0" value={form.incidents_last_12m} onChange={set('incidents_last_12m')} />
+          <label>Nom du demandeur
+            <input value={form.clientName} onChange={set('clientName')} placeholder="Nom et prénom(s)" required />
           </label>
-          <label>Taux de remboursement estimé (%)
-            <input type="number" min="0" max="100" value={form.repayment_rate_pct} onChange={set('repayment_rate_pct')} />
+          <label>Genre <span className="hint">(audit d'équité uniquement, jamais utilisé par le score)</span>
+            <select value={form.genre} onChange={set('genre')}>
+              <option value="">Non renseigné</option>
+              <option value="F">F</option>
+              <option value="M">M</option>
+            </select>
+          </label>
+          <label>Âge <input type="number" min="18" value={form.age} onChange={set('age')} /></label>
+          <label>Zone
+            <select value={form.zone} onChange={set('zone')}>
+              <option value="urbain">Urbain</option>
+              <option value="rural">Rural</option>
+            </select>
+          </label>
+          <label>Secteur d'activité
+            <select value={form.secteur} onChange={set('secteur')}>
+              {SECTEURS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+          <label>Ancienneté de l'activité (mois, min. 6)
+            <input type="number" min="6" value={form.anciennete_activite_mois} onChange={set('anciennete_activite_mois')} />
+          </label>
+          <label>Personnes à charge <input type="number" min="0" value={form.personnes_a_charge} onChange={set('personnes_a_charge')} /></label>
+          <label className="checkline"><input type="checkbox" checked={form.informel} onChange={set('informel')} /> Activité informelle</label>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>Capacité de remboursement</legend>
+        <div className="grid2">
+          <label>Chiffre d'affaires mensuel (FCFA) <input type="number" min="0" value={form.chiffre_affaires} onChange={set('chiffre_affaires')} required /></label>
+          <label>Charges de l'activité (achats, FCFA/mois) <input type="number" min="0" value={form.charges_activite} onChange={set('charges_activite')} /></label>
+          <label>Flux de trésorerie net (FCFA/mois) <input type="number" value={form.flux_tresorerie_net} onChange={set('flux_tresorerie_net')} placeholder="= bénéfice si laissé vide" /></label>
+          <label>Charges personnelles (FCFA/mois) <input type="number" min="0" value={form.charges_perso} onChange={set('charges_perso')} /></label>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>Crédit demandé</legend>
+        <div className="grid2">
+          <label>Montant demandé (FCFA) <input type="number" min="150000" value={form.montant_demande} onChange={set('montant_demande')} required /></label>
+          <label>Durée (mois)
+            <select value={form.duree_mois} onChange={set('duree_mois')}>
+              {[6, 9, 12, 18, 24].map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </label>
         </div>
-      )}
+      </fieldset>
+
+      <fieldset><legend>Épargne &amp; discipline financière</legend>
+        <div className="grid2">
+          <label>Épargne mensuelle (FCFA) <input type="number" min="0" value={form.epargne_mensuelle} onChange={set('epargne_mensuelle')} /></label>
+          <label>Régularité de l'épargne (0-1) <input type="number" min="0" max="1" step="0.05" value={form.regularite_epargne} onChange={set('regularite_epargne')} /></label>
+          <label className="checkline"><input type="checkbox" checked={form.participe_tontine} onChange={set('participe_tontine')} /> Participe à une tontine</label>
+          {form.participe_tontine && (
+            <label>Régularité de la tontine (0-1) <input type="number" min="0" max="1" step="0.05" value={form.regularite_tontine} onChange={set('regularite_tontine')} /></label>
+          )}
+        </div>
+      </fieldset>
+
+      <fieldset><legend>Historique de crédit</legend>
+        <label className="checkline"><input type="checkbox" checked={form.a_historique} onChange={set('a_historique')} /> A déjà un historique de crédit chez nous (sinon : primo-demandeur / cold start)</label>
+        {form.a_historique && (
+          <div className="grid2">
+            <label>Crédits antérieurs <input type="number" min="0" value={form.nb_credits_anterieurs} onChange={set('nb_credits_anterieurs')} /></label>
+            <label>Retards passés <input type="number" min="0" value={form.nb_retards} onChange={set('nb_retards')} /></label>
+            <label className="checkline"><input type="checkbox" checked={form.deja_impaye} onChange={set('deja_impaye')} /> A déjà eu un impayé</label>
+          </div>
+        )}
+      </fieldset>
+
+      <fieldset><legend>Garanties &amp; réputation</legend>
+        <div className="grid2">
+          <label className="checkline"><input type="checkbox" checked={form.a_caution} onChange={set('a_caution')} /> Caution personnelle déclarée</label>
+          {form.a_caution && (
+            <label>Solidité de la caution (0-1) <input type="number" min="0" max="1" step="0.05" value={form.capacite_caution} onChange={set('capacite_caution')} /></label>
+          )}
+          <label>Réputation de terrain (0-1) <input type="number" min="0" max="1" step="0.05" value={form.score_reputation} onChange={set('score_reputation')} /></label>
+        </div>
+      </fieldset>
 
       <button className="btn-primary" type="submit" disabled={submitting}>
         {submitting ? 'Analyse en cours…' : "Créer le dossier et lancer l'analyse"}

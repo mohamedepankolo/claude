@@ -8,7 +8,7 @@ export default function ResultPanel({ dossier }) {
     <div className="card">
       <div className={`verdict verdict-${dossier.decision}`}>
         <div className="verdict-title">{DECISION_LABEL[dossier.decision] ?? dossier.decision}</div>
-        <div className="verdict-sub">{dossier.client_name} · {dossier.purpose} · demande de {Number(dossier.amount_requested).toLocaleString('fr-FR')} FCFA sur {dossier.duration} mois</div>
+        <div className="verdict-sub">{dossier.client_name} · {dossier.secteur?.replace(/_/g, ' ')} · demande de {Number(dossier.montant_demande).toLocaleString('fr-FR')} FCFA sur {dossier.duree_mois} mois</div>
         <div className="verdict-figs">
           <div><strong>{dossier.score}</strong><span>score /100</span></div>
           <div><strong>{Number(dossier.recommended_amount).toLocaleString('fr-FR')}</strong><span>soutenable FCFA</span></div>

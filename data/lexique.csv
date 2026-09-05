@@ -1,0 +1,31 @@
+Colonne,Signification
+genre,"Genre (F/M) — audit d'équité uniquement, PAS dans le score"
+age,Âge (années)
+zone,Zone d'habitation (urbain / rural)
+secteur,"commerce_detail, vente_vivres, quincaillerie_materiaux, services, artisanat, agriculture"
+informel,Activité informelle (1/0)
+personnes_a_charge,Personnes à charge
+anciennete_activite_mois,Ancienneté de l'activité (mois) — min 6 (< 6 mois = non financé)
+chiffre_affaires,Chiffre d'affaires mensuel = ensemble des ventes (FCFA)
+charges_activite,"Charges de l'activité : achats de marchandises, dépenses d'exploitation (FCFA)"
+revenu_activite,BÉNÉFICE mensuel = chiffre d'affaires − charges de l'activité (FCFA)
+flux_tresorerie_net,Flux de trésorerie net mensuel (FCFA)
+charges_perso,Charges personnelles/familiales par mois (FCFA)
+montant_demande,Montant du crédit demandé (FCFA) — de 150 000 à plusieurs centaines de millions (plafond 400 M)
+duree_mois,Durée (mois) — majoritairement 12
+mensualite,Mensualité estimée (FCFA) — CALCULÉE
+taux_endettement,Mensualité / bénéfice — CALCULÉ
+couverture_cashflow,Flux / mensualité (>1 = confortable) — CALCULÉ
+epargne_mensuelle,Épargne mensuelle (FCFA)
+regularite_epargne,Régularité de l'épargne (0 à 1)
+participe_tontine,Participe à une tontine (1/0)
+regularite_tontine,Régularité de la tontine (0 à 1)
+a_historique,A déjà un historique de crédit (1/0)
+nb_credits_anterieurs,Nombre de crédits antérieurs
+nb_retards,Nombre de retards de paiement passés
+deja_impaye,A déjà eu un impayé (1/0)
+a_caution,Présence d'une caution / garant (1/0)
+capacite_caution,Solidité de la caution (0 à 1)
+score_reputation,Réputation / comportement financier (0 à 1)
+type_probleme,aucun / retards (graves) / impaye (non remboursé)
+defaut,"RÉSULTAT : 1 = impayé OU retards graves, 0 = remboursé correctement"

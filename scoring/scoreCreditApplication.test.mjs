@@ -1,99 +1,143 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { scoreCreditApplication, RISK_LEVELS, DECISIONS } from './scoreCreditApplication.mjs';
 
-test('throws without application_id', () => {
-  assert.throws(() => scoreCreditApplication({ income: 1000 }), TypeError);
-});
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-test('throws without an input object', () => {
-  assert.throws(() => scoreCreditApplication(), TypeError);
-});
+function loadSampleRows() {
+  const csv = readFileSync(path.join(__dirname, '../data/echantillon_40.csv'), 'utf-8').trim().split(/\r?\n/);
+  const header = csv[0].split(',').map((h) => h.trim());
+  return csv.slice(1).map((line) => {
+    const cells = line.split(',').map((c) => c.trim());
+    const row = {};
+    header.forEach((h, i) => { row[h] = cells[i]; });
+    return row;
+  });
+}
 
-test('strong repeat-borrower dossier is approved with high confidence', () => {
-  const out = scoreCreditApplication({
-    application_id: 'app-1',
-    amount_requested: 300000,
-    duration: 12,
-    income: 500000 * 0.4,
-    expenses: 5000,
-    business_age: 36,
-    savings: 1,
-    guarantee: 1,
-    history: { has_prior_credit: true, incidents_last_12m: 0, repayment_rate_pct: 98 },
-    profile: { reputation: 'good', guarantor_strength: 'good', sector_dynamics: 'favorable', agency_distance_km: 1 },
-  });
-  assert.equal(out.decision, DECISIONS.APPROVE);
-  assert.equal(out.risk_level, RISK_LEVELS.LOW);
-  assert.ok(out.score >= 70, `expected score >= 70, got ${out.score}`);
-  assert.ok(out.confidence > 0.7, `expected high confidence, got ${out.confidence}`);
-  assert.ok(out.recommended_amount > 0);
-  assert.ok(Array.isArray(out.explanations) && out.explanations.length > 0);
-  assert.ok(Array.isArray(out.narrative) && out.narrative.length > 0);
-});
+function rowToInput(row, id) {
+  const num = (k) => Number(row[k]);
+  return {
+    application_id: id,
+    age: num('age'),
+    zone: row.zone,
+    secteur: row.secteur,
+    informel: num('informel'),
+    personnes_a_charge: num('personnes_a_charge'),
+    anciennete_activite_mois: num('anciennete_activite_mois'),
+    chiffre_affaires: num('chiffre_affaires'),
+    charges_activite: num('charges_activite'),
+    revenu_activite: num('revenu_activite'),
+    flux_tresorerie_net: num('flux_tresorerie_net'),
+    charges_perso: num('charges_perso'),
+    montant_demande: num('montant_demande'),
+    duree_mois: num('duree_mois'),
+    epargne_mensuelle: num('epargne_mensuelle'),
+    regularite_epargne: num('regularite_epargne'),
+    participe_tontine: num('participe_tontine'),
+    regularite_tontine: num('regularite_tontine'),
+    a_historique: num('a_historique'),
+    nb_credits_anterieurs: num('nb_credits_anterieurs'),
+    nb_retards: num('nb_retards'),
+    deja_impaye: num('deja_impaye'),
+    a_caution: num('a_caution'),
+    capacite_caution: num('capacite_caution'),
+    score_reputation: num('score_reputation'),
+  };
+}
 
-test('over-indebted, unstable dossier is rejected', () => {
-  const out = scoreCreditApplication({
-    application_id: 'app-2',
-    amount_requested: 600000,
-    duration: 6,
-    income: 60000 * 0.15,
-    expenses: 20000,
-    business_age: 2,
-    savings: 0,
-    guarantee: 0,
-    profile: { reputation: 'to_verify', sector_dynamics: 'difficult', agency_distance_km: 15 },
-  });
-  assert.equal(out.decision, DECISIONS.REJECT);
-  assert.equal(out.risk_level, RISK_LEVELS.HIGH);
-  assert.ok(out.score < 40, `expected score < 40, got ${out.score}`);
-});
-
-test('cold start (no prior credit) uses the substitute weighting and lowers confidence', () => {
-  const withHistory = scoreCreditApplication({
-    application_id: 'app-3a',
-    amount_requested: 300000, duration: 12, income: 250000, expenses: 5000, business_age: 18,
-    savings: 1, guarantee: 1,
-    history: { has_prior_credit: true, incidents_last_12m: 0, repayment_rate_pct: 95 },
-    profile: { reputation: 'good', guarantor_strength: 'good', sector_dynamics: 'favorable', agency_distance_km: 2 },
-  });
-  const coldStart = scoreCreditApplication({
-    application_id: 'app-3b',
-    amount_requested: 300000, duration: 12, income: 250000, expenses: 5000, business_age: 18,
-    savings: 1, guarantee: 1,
-    profile: { reputation: 'good', guarantor_strength: 'good', sector_dynamics: 'favorable', agency_distance_km: 2 },
-  });
-  assert.ok(coldStart.confidence < withHistory.confidence);
-  assert.ok(!coldStart.explanations.some((e) => e.code === 'history'));
-});
-
-test('recommended_amount never exceeds ~115% of the requested amount', () => {
-  const out = scoreCreditApplication({
-    application_id: 'app-4',
-    amount_requested: 100000, duration: 12, income: 5000000, expenses: 0, business_age: 60,
-    savings: 1, guarantee: 1,
-    history: { has_prior_credit: true, incidents_last_12m: 0, repayment_rate_pct: 100 },
-    profile: { reputation: 'good', guarantor_strength: 'good', sector_dynamics: 'favorable', agency_distance_km: 0 },
-  });
-  assert.ok(out.recommended_amount <= 100000 * 1.15);
+test('throws without application_id or secteur', () => {
+  assert.throws(() => scoreCreditApplication({ montant_demande: 1000 }), TypeError);
+  assert.throws(() => scoreCreditApplication({ application_id: 'a', montant_demande: 1000 }), TypeError);
 });
 
 test('output shape matches the contract exactly', () => {
   const out = scoreCreditApplication({
-    application_id: 'app-5', amount_requested: 200000, duration: 10, income: 150000, expenses: 10000, business_age: 10,
+    application_id: 'x1', secteur: 'commerce_detail', montant_demande: 300000, duree_mois: 12,
+    chiffre_affaires: 500000, charges_activite: 200000, anciennete_activite_mois: 24,
   });
   const keys = Object.keys(out).sort();
   assert.deepEqual(keys, ['confidence', 'decision', 'explanations', 'narrative', 'recommended_amount', 'risk_level', 'score'].sort());
-  assert.equal(typeof out.score, 'number');
   assert.ok(['low', 'medium', 'high'].includes(out.risk_level));
   assert.ok(['approve', 'review', 'reject'].includes(out.decision));
-  assert.equal(typeof out.confidence, 'number');
-  assert.equal(typeof out.recommended_amount, 'number');
+  assert.ok(out.confidence >= 0 && out.confidence <= 1);
   for (const e of out.explanations) {
     assert.equal(typeof e.code, 'string');
     assert.equal(typeof e.label, 'string');
     assert.ok(['favorable', 'unfavorable'].includes(e.direction));
-    assert.equal(typeof e.weight, 'number');
     assert.equal(typeof e.detail, 'string');
   }
+});
+
+test('a well-off, low-debt-ratio dossier with a clean history scores low risk', () => {
+  const out = scoreCreditApplication({
+    application_id: 'good-1', secteur: 'services', zone: 'urbain',
+    montant_demande: 300000, duree_mois: 18,
+    chiffre_affaires: 1500000, charges_activite: 400000, anciennete_activite_mois: 48,
+    epargne_mensuelle: 100000, regularite_epargne: 0.9, participe_tontine: 1, regularite_tontine: 0.9,
+    a_historique: 1, nb_credits_anterieurs: 2, nb_retards: 0, deja_impaye: 0,
+    a_caution: 1, capacite_caution: 0.9, score_reputation: 0.9,
+  });
+  assert.equal(out.decision, DECISIONS.APPROVE);
+  assert.equal(out.risk_level, RISK_LEVELS.LOW);
+});
+
+test('a heavily-indebted dossier with a bad repayment history scores high risk', () => {
+  const out = scoreCreditApplication({
+    application_id: 'bad-1', secteur: 'quincaillerie_materiaux', zone: 'rural',
+    montant_demande: 2000000, duree_mois: 6,
+    chiffre_affaires: 300000, charges_activite: 270000, anciennete_activite_mois: 8,
+    epargne_mensuelle: 0, regularite_epargne: 0.1, participe_tontine: 0, regularite_tontine: 0,
+    a_historique: 1, nb_credits_anterieurs: 1, nb_retards: 6, deja_impaye: 1,
+    a_caution: 0, capacite_caution: 0, score_reputation: 0.2,
+  });
+  assert.equal(out.decision, DECISIONS.REJECT);
+  assert.equal(out.risk_level, RISK_LEVELS.HIGH);
+});
+
+test('confidence approaches 1 for an extremely safe dossier, not a flat ~50%', () => {
+  const out = scoreCreditApplication({
+    application_id: 'extreme-safe', secteur: 'services', zone: 'urbain',
+    montant_demande: 150000, duree_mois: 24,
+    chiffre_affaires: 5000000, charges_activite: 500000, anciennete_activite_mois: 120,
+    epargne_mensuelle: 500000, regularite_epargne: 1, participe_tontine: 1, regularite_tontine: 1,
+    a_historique: 1, nb_credits_anterieurs: 5, nb_retards: 0, deja_impaye: 0,
+    a_caution: 1, capacite_caution: 1, score_reputation: 1,
+  });
+  assert.equal(out.risk_level, RISK_LEVELS.LOW);
+  assert.ok(out.confidence > 0.9, `expected confidence > 0.9 for an extreme case, got ${out.confidence}`);
+});
+
+test('recommended_amount never exceeds ~115% of the requested amount', () => {
+  const out = scoreCreditApplication({
+    application_id: 'cap-1', secteur: 'services', montant_demande: 100000, duree_mois: 12,
+    chiffre_affaires: 5000000, charges_activite: 500000, anciennete_activite_mois: 60,
+  });
+  assert.ok(out.recommended_amount <= 100000 * 1.15);
+});
+
+test('genre is not accepted as a scoring input (excluded per Prisca\'s guide)', () => {
+  const withGenre = scoreCreditApplication({ application_id: 'g1', secteur: 'commerce_detail', montant_demande: 300000, duree_mois: 12, chiffre_affaires: 500000, charges_activite: 200000, genre: 'F' });
+  const withoutGenre = scoreCreditApplication({ application_id: 'g2', secteur: 'commerce_detail', montant_demande: 300000, duree_mois: 12, chiffre_affaires: 500000, charges_activite: 200000 });
+  assert.equal(withGenre.score, withoutGenre.score, 'passing genre must not change the score');
+});
+
+test('on the 40-sample sheet, average score is meaningfully lower for dossiers that actually defaulted', () => {
+  const rows = loadSampleRows();
+  assert.ok(rows.length >= 30, `expected the sample sheet to have rows, got ${rows.length}`);
+
+  const scores = { defaulted: [], clean: [] };
+  rows.forEach((row, i) => {
+    const out = scoreCreditApplication(rowToInput(row, `sample-${i}`));
+    (row.defaut === '1' ? scores.defaulted : scores.clean).push(out.score);
+  });
+
+  const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const avgDefaulted = avg(scores.defaulted);
+  const avgClean = avg(scores.clean);
+  assert.ok(scores.defaulted.length > 0 && scores.clean.length > 0, 'sample sheet should contain both outcomes');
+  assert.ok(avgClean > avgDefaulted, `expected clean-repayment dossiers to score higher on average (clean=${avgClean.toFixed(1)}, defaulted=${avgDefaulted.toFixed(1)})`);
 });

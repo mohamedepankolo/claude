@@ -7,7 +7,10 @@ import initSqlJs from 'sql.js'
 import { v4 as uuid } from 'uuid'
 import { SCHEMA_SQL } from './schema.js'
 
-const STORAGE_KEY = 'baraka_sqlite_db_v1'
+// v2 : les colonnes de credit_applications sont passées aux variables
+// réelles validées par Prisca (cf. schema.js) — on change de clé de
+// stockage pour ne pas tenter de recharger une base v1 incompatible.
+const STORAGE_KEY = 'baraka_sqlite_db_v2'
 const now = () => new Date().toISOString()
 
 let SQL = null
@@ -66,19 +69,32 @@ export function ensureClient(db, name) {
   return id
 }
 
+const APPLICATION_FIELDS = [
+  'genre', 'age', 'zone', 'secteur', 'informel', 'personnes_a_charge', 'anciennete_activite_mois',
+  'chiffre_affaires', 'charges_activite', 'revenu_activite', 'flux_tresorerie_net', 'charges_perso',
+  'montant_demande', 'duree_mois', 'epargne_mensuelle', 'regularite_epargne', 'participe_tontine',
+  'regularite_tontine', 'a_historique', 'nb_credits_anterieurs', 'nb_retards', 'deja_impaye',
+  'a_caution', 'capacite_caution', 'score_reputation',
+]
+
 /**
- * Crée un dossier de demande de crédit. `extra` (optionnel) porte les
- * signaux qualitatifs consommés par le contrat de scoring (history, profile).
+ * Crée un dossier de demande de crédit. `fields` porte les variables du
+ * contrat de scoring (cf. scoring/scoreCreditApplication.mjs) ; `clientName`
+ * et `genre` sont gérés à part (le second n'est jamais transmis au scoring).
  * Retourne l'id (UUID) du dossier créé.
  */
-export function createApplication(db, { clientName, amount_requested, duration, purpose, income, expenses, business_age, savings, guarantee, extra }) {
+export function createApplication(db, { clientName, ...fields }) {
   const clientId = ensureClient(db, clientName)
   const id = uuid()
+  const cols = ['id', 'client_id', ...APPLICATION_FIELDS, 'created_at', 'updated_at', 'sync_status']
+  const values = [
+    id, clientId,
+    ...APPLICATION_FIELDS.map((f) => fields[f] ?? null),
+    now(), now(), 'pending',
+  ]
   db.run(
-    `INSERT INTO credit_applications
-       (id, client_id, amount_requested, duration, purpose, income, expenses, business_age, savings, guarantee, extra_json, created_at, updated_at, sync_status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-    [id, clientId, amount_requested, duration, purpose ?? null, income, expenses, business_age, savings ? 1 : 0, guarantee ? 1 : 0, extra ? JSON.stringify(extra) : null, now(), now()]
+    `INSERT INTO credit_applications (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+    values
   )
   enqueueSync(db, 'credit_applications', id, 'create')
   persist(db)
@@ -89,9 +105,9 @@ export function createApplication(db, { clientName, amount_requested, duration, 
 export function saveScoreAndDecision(db, applicationId, result) {
   const scoreId = uuid()
   db.run(
-    `INSERT INTO credit_scores (id, application_id, score, risk_level, confidence, recommended_amount, explanations, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [scoreId, applicationId, result.score, result.risk_level, result.confidence, result.recommended_amount, JSON.stringify(result.explanations), now()]
+    `INSERT INTO credit_scores (id, application_id, score, risk_level, confidence, recommended_amount, explanations, narrative, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [scoreId, applicationId, result.score, result.risk_level, result.confidence, result.recommended_amount, JSON.stringify(result.explanations), JSON.stringify(result.narrative ?? []), now()]
   )
   const decisionId = uuid()
   db.run(
@@ -107,7 +123,7 @@ export function saveScoreAndDecision(db, applicationId, result) {
 export function listApplications(db) {
   return queryAll(db, `
     SELECT
-      a.id, a.amount_requested, a.duration, a.purpose, a.created_at, a.sync_status,
+      a.id, a.montant_demande, a.duree_mois, a.secteur, a.created_at, a.sync_status,
       c.name AS client_name,
       s.score, s.risk_level, s.confidence, s.recommended_amount,
       d.decision
@@ -124,7 +140,7 @@ export function getApplication(db, applicationId) {
   const rows = queryAll(db, `
     SELECT
       a.*, c.name AS client_name,
-      s.score, s.risk_level, s.confidence, s.recommended_amount, s.explanations,
+      s.score, s.risk_level, s.confidence, s.recommended_amount, s.explanations, s.narrative,
       d.decision, d.reason
     FROM credit_applications a
     JOIN clients c ON c.id = a.client_id
@@ -136,8 +152,8 @@ export function getApplication(db, applicationId) {
   const row = rows[0]
   return {
     ...row,
-    extra: row.extra_json ? JSON.parse(row.extra_json) : null,
     explanations: row.explanations ? JSON.parse(row.explanations) : [],
+    narrative: row.narrative ? JSON.parse(row.narrative) : [],
   }
 }
 
