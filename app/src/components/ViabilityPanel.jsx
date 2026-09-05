@@ -9,7 +9,11 @@ import { computeViability } from '@finance/computeViability.mjs'
  * fusionnés (règle d'architecture "TEG ≠ rentabilité").
  */
 export default function ViabilityPanel({ dossier, onCompute }) {
-  const [taux, setTaux] = useState('18')
+  // Défaut à 30% (pas 18% comme le panneau TEG) : à ce taux, les coûts
+  // placeholder de ce moteur (ressources + opérationnel ≈ 11% du montant)
+  // ne sont couverts par les intérêts que si le taux est réaliste pour du
+  // microcrédit — cf. finance/computeViability.test.mjs. Reste modifiable.
+  const [taux, setTaux] = useState('30')
   const [frais, setFrais] = useState('0')
   const [result, setResult] = useState(dossier?.viability ?? null)
 
