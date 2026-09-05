@@ -40,6 +40,8 @@ const APPLICATION_FIELDS = [
   // consommés uniquement par @scoring/applyBusinessGuardrails.
   'anciennete_membre_mois', 'endettement_externe_declare', 'montant_dernier_credit',
   'type_credit', 'type_garantie', 'valeur_garantie', 'pertinence_saisonniere', 'croissance_ventes_pct',
+  // Veille employeur/activité (cf. veille/ et db/veilleRepository.js).
+  'employeur_nom',
 ]
 
 /** Crée un dossier de demande de crédit. Retourne l'id (UUID) du dossier créé. */

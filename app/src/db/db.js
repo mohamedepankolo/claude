@@ -29,3 +29,21 @@ db.version(2).stores({
 db.version(3).stores({
   external_credit_checks: 'id, application_id, created_at',
 })
+
+// v4 : veille employeur/activité + corpus documentaire multiformat, cf.
+// rapport "Veille et corpus multiformat" (sept. 2026) — trois espaces
+// documentaires distincts (section 5 du rapport) : `imported_documents`
+// alimente le référentiel métier (RAG global), `veille_sources`/
+// `veille_evenements`/`veille_alertes` couvrent la dimension "veille"
+// (employeur/activité, jamais les pièces du dossier client lui-même).
+// `veille_evenements` mêle volontairement "Source" et "Événement" (deux
+// tables distinctes dans le rapport, section 6) en une seule — simplification
+// assumée pour le MVP : chaque ligne porte à la fois la description du fait
+// et sa citation (source_titre, date_publication, empreinte pour dédoublonner).
+db.version(4).stores({
+  entities: 'id, nom, type',
+  dossier_entity_links: 'id, application_id, entity_id',
+  veille_evenements: 'id, entity_id, empreinte, created_at',
+  veille_alertes: 'id, evenement_id, application_id, statut, created_at',
+  imported_documents: 'id, statut, created_at',
+})

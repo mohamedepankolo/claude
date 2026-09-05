@@ -17,6 +17,7 @@ export default defineConfig({
       '@regulatory': path.resolve(__dirname, '../regulatory'),
       '@finance': path.resolve(__dirname, '../finance'),
       '@rag': path.resolve(__dirname, '../rag'),
+      '@veille': path.resolve(__dirname, '../veille'),
     },
   },
   server: {

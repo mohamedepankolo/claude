@@ -1,6 +1,6 @@
 const DECISION_LABEL = { approve: 'Accordé', review: 'À examiner', reject: 'Refusé', abstention: 'À compléter' }
 
-export default function Sidebar({ isOnline, applications, selectedId, onSelect, onNew, pendingCount, syncing, onSyncNow, theme, onToggleTheme }) {
+export default function Sidebar({ isOnline, applications, selectedId, onSelect, onNew, onOpenLibrary, showLibrary, pendingCount, syncing, onSyncNow, theme, onToggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -10,6 +10,9 @@ export default function Sidebar({ isOnline, applications, selectedId, onSelect, 
 
       <div className="side-block">
         <button className="nav-item" onClick={onNew}>+ Nouveau dossier</button>
+        <button className="nav-item" onClick={onOpenLibrary} style={{ marginTop: 6 }} aria-current={showLibrary}>
+          📚 Bibliothèque documentaire
+        </button>
         <div className={`conn-status conn-${isOnline ? 'online' : 'offline'}`}>
           <span className="dot" /> {isOnline ? 'En ligne' : 'Hors ligne'}
           {pendingCount > 0 && <span className="pending-count">{pendingCount} en attente</span>}

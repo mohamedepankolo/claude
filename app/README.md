@@ -73,6 +73,19 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   structurés, via le LLM local) partagé par l'import de dossier scanné et le
   rapport BIC. `src/audio/whisperClient.js` — même pipeline en aval d'une
   transcription audio (`whisper-server`, cf. `PLAN_INTERFACE_DOCUMENTS.md`).
+- `src/documents/extractDocument.js` (aliasé nulle part, appelé directement) —
+  extraction multiformat (PDF texte/scanné avec bascule OCR, DOCX, JPG/PNG)
+  pour la **bibliothèque documentaire** (`CorpusLibraryPanel.jsx`), qui
+  alimente le RAG global après relecture obligatoire (`src/rag/dynamicCorpus.js`
+  fusionne le corpus contrôlé et les documents importés). OCR 100% local
+  (Tesseract.js, modèle de langue française embarqué dans `public/tessdata/`,
+  aucun appel réseau) — cf. `../veille/README.md`.
+- `../veille/matchEntity.mjs` + `../veille/syntheticFeed.mjs` (aliasés
+  `@veille`) — **veille employeur/activité** (`VeillePanel.jsx`) : recherche
+  d'événements pouvant fragiliser les revenus du client dans un flux
+  explicitement fictif, rapprochement nom+secteur/localité (jamais un nom
+  seul), dédoublonnage des republications, revue humaine obligatoire, jamais
+  de modification automatique du score. Détail complet dans `../veille/README.md`.
 - `src/components/` — formulaire de dossier (avec pré-remplissage optionnel
   depuis un document importé), import de dossier scanné (PDF), entretien
   enregistré (audio), panneau de résultat, **explication de la décision**
@@ -99,6 +112,9 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] **BIC facultatif** : bouton "Passer cette étape", import du rapport (PDF) ou saisie manuelle, ré-évaluation des garde-fous sans toucher au score ML
 - [x] **Entretien audio → transcription → extraction** (code complet, testé avec un micro simulé ; vérification avec un vrai `whisper-server` à faire sur la machine de démo)
 - [x] **Interface redessinée** (maquette `../index-light.html`) : thème clair/sombre bascule, cartes avec ombre, onglets Formulaire/Documents/Audio, verdict/facteurs de décision restylés
+- [x] **Contrôle qualité en amont + abstention** : un dossier avec une information critique manquante ou hors du domaine du modèle est bloqué avant le scoring, motifs affichés, formulaire réouvrable pour compléter
+- [x] **Bibliothèque documentaire** : import PDF/DOCX/JPG-PNG (OCR local, aucun réseau), relecture obligatoire, indexation dynamique dans le RAG
+- [x] **Veille employeur/activité** : flux synthétique fictif, rapprochement nom+secteur/localité, dédoublonnage, revue humaine (confirmer/écarter/actualiser), jamais de modification automatique du score
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
 - [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
 - [x] Testé de bout en bout (formulaire → score → TEG → rentabilité → RAG → affichage), y compris

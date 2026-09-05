@@ -7,3 +7,5 @@ export async function initDb() {
 }
 
 export * from './repository.js'
+export * from './veilleRepository.js'
+export * from './documentsRepository.js'

@@ -36,6 +36,7 @@ const initial = {
   age: '',
   zone: 'urbain',
   secteur: 'commerce_detail',
+  employeur_nom: '',
   informel: false,
   personnes_a_charge: '',
   anciennete_activite_mois: '',
@@ -110,6 +111,7 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
       age: num(form.age, null),
       zone: form.zone,
       secteur: form.secteur,
+      employeur_nom: form.employeur_nom || null,
       informel: form.informel,
       personnes_a_charge: num(form.personnes_a_charge, null),
       anciennete_activite_mois: num(form.anciennete_activite_mois, 6),
@@ -175,6 +177,9 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
             <select value={form.secteur} onChange={set('secteur')}>
               {SECTEURS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
+          </label>
+          <label>Employeur <span className="hint">si salarié — sinon la veille suit l'activité/secteur</span>
+            <input type="text" value={form.employeur_nom} onChange={set('employeur_nom')} placeholder="Optionnel" />
           </label>
           <label>Ancienneté de l'activité (mois, min. 6)
             {/* Pas de contrainte HTML `min` ici volontairement : une valeur

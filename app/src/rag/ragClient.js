@@ -6,11 +6,9 @@
 // Règle d'architecture (Lory) : "le RAG explique, il ne remplace pas le
 // moteur réglementaire" — cette brique ne décide jamais de la conformité
 // (@regulatory/computeTEG.mjs s'en charge), elle explique et cite ses sources.
-import { buildIndex, search } from '@rag/retrieve.mjs'
-import { CORPUS } from '@rag/corpus.mjs'
+import { search } from '@rag/retrieve.mjs'
 import { isLlmAvailable, chatCompletion } from '../llm/llmClient.js'
-
-const INDEX = buildIndex(CORPUS)
+import { getRagIndex } from './dynamicCorpus.js'
 
 const RAG_SYSTEM_PROMPT = `Tu es l'assistant réglementaire de Baraka Score. Tu réponds en français,
 brièvement. Règle stricte : réponds UNIQUEMENT à partir des passages fournis
@@ -24,7 +22,8 @@ dis-le clairement plutôt que de deviner ou d'inventer une règle.`
  * @returns {Promise<{ answer: string, sources: Array<{title:string, excerpt:string}>, viaLlm: boolean }>}
  */
 export async function askRegulatory(question) {
-  const passages = search(question, INDEX, 3)
+  const index = await getRagIndex()
+  const passages = search(question, index, 3)
 
   if (!passages.length) {
     return {

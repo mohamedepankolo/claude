@@ -13,6 +13,8 @@ import DecisionExplanationPanel from './components/DecisionExplanationPanel.jsx'
 import ExternalChecksPanel from './components/ExternalChecksPanel.jsx'
 import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
+import VeillePanel from './components/VeillePanel.jsx'
+import CorpusLibraryPanel from './components/CorpusLibraryPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import './App.css'
 
@@ -64,6 +66,7 @@ export default function App() {
   const [syncing, setSyncing] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [showForm, setShowForm] = useState(true)
+  const [showLibrary, setShowLibrary] = useState(false)
   const [prefill, setPrefill] = useState(null)
   const [prefillVersion, setPrefillVersion] = useState(0)
   const isOnline = useOnlineStatus()
@@ -94,13 +97,20 @@ export default function App() {
     setSelectedId(id)
     setSelected(await getApplication(id))
     setShowForm(false)
+    setShowLibrary(false)
   }
 
   function handleNew() {
     setSelectedId(null)
     setSelected(null)
     setShowForm(true)
+    setShowLibrary(false)
     setPrefill(null)
+  }
+
+  function handleOpenLibrary() {
+    setShowLibrary(true)
+    setShowForm(false)
   }
 
   // Import PDF (DocumentImportPanel) et/ou audio (AudioInterviewPanel)
@@ -182,10 +192,11 @@ export default function App() {
     if (navigator.onLine) await runSync()
   }
 
-  // Reprend un dossier en abstention pour le compléter : réouvre le
-  // formulaire pré-rempli avec ce qui a déjà été saisi (même mécanisme que
-  // l'import de document/audio), plutôt que de tout ressaisir.
-  function handleCompleteAbstention() {
+  // Réouvre le formulaire pré-rempli avec ce qui a déjà été saisi (même
+  // mécanisme que l'import de document/audio), plutôt que de tout
+  // ressaisir — utilisé pour compléter un dossier en abstention comme pour
+  // actualiser un dossier après une alerte de veille confirmée pertinente.
+  function handleEditDossier() {
     if (!selected) return
     // Reconstruit un objet "prefill" propre plutôt que de réutiliser `selected`
     // tel quel : les cases à cocher sont stockées normalisées en 0/1
@@ -227,6 +238,8 @@ export default function App() {
         selectedId={selectedId}
         onSelect={handleSelect}
         onNew={handleNew}
+        onOpenLibrary={handleOpenLibrary}
+        showLibrary={showLibrary}
         pendingCount={pendingCount}
         syncing={syncing}
         onSyncNow={runSync}
@@ -236,7 +249,7 @@ export default function App() {
       <main className="main">
         <div className="topbar">
           <div>
-            <div className="topbar-title">{showForm ? 'Nouveau dossier de crédit' : selected?.client_name}</div>
+            <div className="topbar-title">{showLibrary ? 'Bibliothèque documentaire' : showForm ? 'Nouveau dossier de crédit' : selected?.client_name}</div>
             <div className="topbar-sub">Scoring microcrédit — assistant à la décision, pas décideur automatique</div>
           </div>
           <div className="topbar-spacer" />
@@ -252,13 +265,15 @@ export default function App() {
               onExtracted={handleExtracted}
             />
           )}
-          {!showForm && selected?.decision === 'abstention' && (
-            <ResultPanel dossier={selected} onCompleteAbstention={handleCompleteAbstention} />
+          {showLibrary && <CorpusLibraryPanel />}
+          {!showForm && !showLibrary && selected?.decision === 'abstention' && (
+            <ResultPanel dossier={selected} onCompleteAbstention={handleEditDossier} />
           )}
-          {!showForm && selected && selected.decision !== 'abstention' && (
+          {!showForm && !showLibrary && selected && selected.decision !== 'abstention' && (
             <>
               <ResultPanel dossier={selected} />
               <DecisionExplanationPanel dossier={selected} />
+              <VeillePanel dossier={selected} onEditDossier={handleEditDossier} />
               <ExternalChecksPanel dossier={selected} onReevaluate={handleReevaluateWithExternalCheck} />
               <RegulatoryAssistant />
               <ChatPanel dossier={selected} />
