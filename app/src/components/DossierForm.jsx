@@ -9,6 +9,27 @@ const SECTEURS = [
   ['agriculture', 'Agriculture'],
 ]
 
+// Champs issus du référentiel complet de Prisca (session de mentoring 3,
+// cf. PLAN_RISQUE.md) — jamais transmis au modèle ML, consommés uniquement
+// par @scoring/applyBusinessGuardrails (garde-fous métier P0/P1).
+const TYPES_CREDIT = [
+  ['productif_fonds_roulement', 'Productif — fonds de roulement'],
+  ['productif_equipement', 'Productif — équipement'],
+  ['productif_immobilier', 'Productif — immobilier'],
+  ['salarie_scolaire', 'Salarié — crédit scolaire'],
+  ['salarie_autre', 'Salarié — autre'],
+  ['agricole', 'Agricole'],
+  ['btp_marche_public', 'BTP / marché public'],
+]
+const TYPES_GARANTIE = [
+  ['aucune', 'Aucune'],
+  ['foncier', 'Foncier / PUH / titre foncier'],
+  ['vehicule', 'Véhicule (carte grise)'],
+  ['materiel', 'Matériel / équipement'],
+  ['caution_solidaire', 'Cautionnement solidaire'],
+  ['domiciliation_salaire', 'Domiciliation de salaire'],
+]
+
 const initial = {
   clientName: '',
   genre: '',
@@ -35,6 +56,14 @@ const initial = {
   a_caution: false,
   capacite_caution: '',
   score_reputation: '0.7',
+  anciennete_membre_mois: '',
+  endettement_externe_declare: '',
+  montant_dernier_credit: '',
+  type_credit: 'productif_fonds_roulement',
+  type_garantie: 'aucune',
+  valeur_garantie: '',
+  pertinence_saisonniere: 'neutre',
+  croissance_ventes_pct: '',
 }
 
 export default function DossierForm({ onSubmit, submitting }) {
@@ -81,6 +110,14 @@ export default function DossierForm({ onSubmit, submitting }) {
       a_caution: form.a_caution,
       capacite_caution: num(form.capacite_caution),
       score_reputation: num(form.score_reputation, 0.5),
+      anciennete_membre_mois: num(form.anciennete_membre_mois, null),
+      endettement_externe_declare: num(form.endettement_externe_declare),
+      montant_dernier_credit: num(form.montant_dernier_credit),
+      type_credit: form.type_credit,
+      type_garantie: form.type_garantie,
+      valeur_garantie: num(form.valeur_garantie),
+      pertinence_saisonniere: form.pertinence_saisonniere,
+      croissance_ventes_pct: num(form.croissance_ventes_pct, null),
     })
     setForm(initial)
   }
@@ -135,8 +172,39 @@ export default function DossierForm({ onSubmit, submitting }) {
           <label>Montant demandé (FCFA) <input type="number" min="150000" value={form.montant_demande} onChange={set('montant_demande')} required /></label>
           <label>Durée (mois)
             <select value={form.duree_mois} onChange={set('duree_mois')}>
-              {[6, 9, 12, 18, 24].map((m) => <option key={m} value={m}>{m}</option>)}
+              {[6, 9, 12, 18, 24, 36, 48].map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
+          </label>
+          <label>Type de crédit <span className="hint">(détermine la durée usuelle attendue)</span>
+            <select value={form.type_credit} onChange={set('type_credit')}>
+              {TYPES_CREDIT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>Évaluation terrain <span className="hint">(jugement déclaré par l'agent, pas une donnée du modèle)</span></legend>
+        <div className="grid2">
+          <label>Pertinence saisonnière du besoin
+            <select value={form.pertinence_saisonniere} onChange={set('pertinence_saisonniere')}>
+              <option value="favorable">Favorable (avant la période de pointe)</option>
+              <option value="neutre">Neutre</option>
+              <option value="defavorable">Défavorable (hors cycle de l'activité)</option>
+            </select>
+          </label>
+          <label>Croissance des ventes déclarée (%) <span className="hint">peut être négative</span>
+            <input type="number" step="1" value={form.croissance_ventes_pct} onChange={set('croissance_ventes_pct')} placeholder="ex. -20" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset><legend>Relation avec l'institution &amp; endettement externe</legend>
+        <div className="grid2">
+          <label>Ancienneté du membre dans l'institution (mois) <span className="hint">≠ ancienneté de l'activité</span>
+            <input type="number" min="0" value={form.anciennete_membre_mois} onChange={set('anciennete_membre_mois')} />
+          </label>
+          <label>Endettement externe déclaré (FCFA) <span className="hint">autres institutions — proxy BIC</span>
+            <input type="number" min="0" value={form.endettement_externe_declare} onChange={set('endettement_externe_declare')} />
           </label>
         </div>
       </fieldset>
@@ -159,6 +227,9 @@ export default function DossierForm({ onSubmit, submitting }) {
             <label>Crédits antérieurs <input type="number" min="0" value={form.nb_credits_anterieurs} onChange={set('nb_credits_anterieurs')} /></label>
             <label>Retards passés <input type="number" min="0" value={form.nb_retards} onChange={set('nb_retards')} /></label>
             <label className="checkline"><input type="checkbox" checked={form.deja_impaye} onChange={set('deja_impaye')} /> A déjà eu un impayé</label>
+            <label>Montant du dernier crédit (FCFA) <span className="hint">progressivité du crédit</span>
+              <input type="number" min="0" value={form.montant_dernier_credit} onChange={set('montant_dernier_credit')} />
+            </label>
           </div>
         )}
       </fieldset>
@@ -170,6 +241,16 @@ export default function DossierForm({ onSubmit, submitting }) {
             <label>Solidité de la caution (0-1) <input type="number" min="0" max="1" step="0.05" value={form.capacite_caution} onChange={set('capacite_caution')} /></label>
           )}
           <label>Réputation de terrain (0-1) <input type="number" min="0" max="1" step="0.05" value={form.score_reputation} onChange={set('score_reputation')} /></label>
+          <label>Type de garantie
+            <select value={form.type_garantie} onChange={set('type_garantie')}>
+              {TYPES_GARANTIE.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+          {form.type_garantie !== 'aucune' && (
+            <label>Valeur estimée de la garantie (FCFA)
+              <input type="number" min="0" value={form.valeur_garantie} onChange={set('valeur_garantie')} />
+            </label>
+          )}
         </div>
       </fieldset>
 

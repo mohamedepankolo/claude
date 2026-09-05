@@ -29,6 +29,10 @@ const APPLICATION_FIELDS = [
   'montant_demande', 'duree_mois', 'epargne_mensuelle', 'regularite_epargne', 'participe_tontine',
   'regularite_tontine', 'a_historique', 'nb_credits_anterieurs', 'nb_retards', 'deja_impaye',
   'a_caution', 'capacite_caution', 'score_reputation',
+  // Garde-fous métier (PLAN_RISQUE.md, P0/P1) — jamais transmis au modèle ML,
+  // consommés uniquement par @scoring/applyBusinessGuardrails.
+  'anciennete_membre_mois', 'endettement_externe_declare', 'montant_dernier_credit',
+  'type_credit', 'type_garantie', 'valeur_garantie', 'pertinence_saisonniere', 'croissance_ventes_pct',
 ]
 
 /** Crée un dossier de demande de crédit. Retourne l'id (UUID) du dossier créé. */
@@ -40,6 +44,35 @@ export async function createApplication({ clientName, ...fields }) {
   await db.credit_applications.add(row)
   await enqueueSync('credit_applications', id, 'create')
   return id
+}
+
+/**
+ * Détecte si ce client a déjà un autre dossier existant (P2 — proxy local de
+ * la vérification BIC/multi-agences décrite dans PLAN_RISQUE.md : ceci ne
+ * couvre que ce navigateur/cette base locale, pas une vraie interconnexion
+ * multi-agences ni le Bureau d'Information sur le Crédit).
+ */
+export async function hasOtherApplicationForClient(clientName, excludeApplicationId) {
+  const client = await db.clients.where('name').equals(clientName).first()
+  if (!client) return false
+  const apps = await db.credit_applications.where('client_id').equals(client.id).toArray()
+  return apps.some((a) => a.id !== excludeApplicationId)
+}
+
+/** Archive une vérification d'endettement externe (P2 — "bibliothèque BIC" recommandée par Prisca). */
+export async function addExternalCreditCheck(applicationId, { source, montant_declare, commentaire }) {
+  const id = uuid()
+  await db.external_credit_checks.add({
+    id, application_id: applicationId, source, montant_declare: montant_declare ?? 0,
+    commentaire: commentaire ?? '', created_at: now(),
+  })
+  return id
+}
+
+/** Liste les vérifications externes archivées pour un dossier, plus récentes en premier. */
+export async function listExternalCreditChecks(applicationId) {
+  const rows = await db.external_credit_checks.where('application_id').equals(applicationId).toArray()
+  return rows.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 }
 
 /** Enregistre le résultat du scoring (contrat @scoring/scoreCreditApplication) pour un dossier. */
@@ -54,7 +87,8 @@ export async function saveScoreAndDecision(applicationId, result) {
   const decisionId = uuid()
   await db.credit_decisions.add({
     id: decisionId, application_id: applicationId, decision: result.decision,
-    reason: result.narrative?.[0] ?? null, agent_override: null, created_at: now(),
+    reason: result.narrative?.[0] ?? null, agent_override: null,
+    guardrails: result.guardrails ?? [], created_at: now(),
   })
   await enqueueSync('credit_scores', scoreId, 'create')
   await enqueueSync('credit_decisions', decisionId, 'create')
@@ -126,7 +160,7 @@ export async function getApplication(applicationId) {
     score: score?.score, risk_level: score?.risk_level, confidence: score?.confidence,
     recommended_amount: score?.recommended_amount, explanations: score?.explanations ?? [],
     narrative: score?.narrative ?? [],
-    decision: decision?.decision, reason: decision?.reason,
+    decision: decision?.decision, reason: decision?.reason, guardrails: decision?.guardrails ?? [],
     regulatory: regulatory ?? null,
     viability: viability ?? null,
   }

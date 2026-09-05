@@ -196,16 +196,52 @@ seuils doivent changer.
 
 ---
 
-## 5. Recommandation
+## 5. État d'implémentation — P0, P1 et P2 construits ✅
 
-Construire le **P0 complet** (`applyBusinessGuardrails.mjs` + les 3 champs
-formulaire + wiring app) est le meilleur rapport effort/valeur avant la
-démo : ça répond directement et concrètement aux retours de Prisca, ça ne
-demande aucune nouvelle donnée d'entraînement, ça reste 100% testable et
-explicable, et ça illustre un vrai savoir-faire métier (progressivité du
-crédit, ancienneté, endettement externe) que peu d'équipes concurrentes
-auront pensé à modéliser sous cette forme précise.
+Décision de l'équipe (Mohamede) : construire les trois paliers plutôt que
+s'arrêter au P0, en assumant honnêtement les limites du P2 (pas de vraie
+intégration BIC). Tout est dans `scoring/applyBusinessGuardrails.mjs`
+(module pur, 17 tests, `scoring/applyBusinessGuardrails.test.mjs`), appliqué
+**après** `scoreCreditApplication` — jamais à sa place, jamais en modifiant
+`explanations`/`score`/`confidence`/`risk_level` du modèle entraîné.
+Principe strict : une règle ne peut que **durcir** `decision` (jamais
+approve← review/reject) et/ou **réduire** `recommended_amount` (jamais
+l'augmenter).
 
-Les points P1/P2 sont réels mais soit trop gros pour le temps restant, soit
-hors de portée technique du hackathon — à mentionner en soutenance comme une
-feuille de route consciente plutôt qu'un oubli.
+- **P0 — construit** : endettement externe déclaré (`endettement_externe_declare`),
+  ancienneté du membre dans l'institution (`anciennete_membre_mois`, plafonne
+  le montant si < 6 mois), progressivité du crédit (`montant_dernier_credit`,
+  réescalade + replafonne si le montant demandé dépasse 3x le dernier crédit).
+- **P1 — construit** : cohérence durée/`type_credit` (informatif, jamais
+  bloquant — `DUREE_NORMES_PAR_TYPE`), ratio garantie/montant
+  (`type_garantie` + `valeur_garantie`, seuil 50%), pertinence saisonnière et
+  croissance des ventes — **toutes deux déclarées par l'agent** (champs
+  qualitatifs collectés à l'entretien terrain, jamais déduites d'une donnée
+  qu'on n'a pas — cf. principe "ne jamais fabriquer un résultat").
+- **P2 — construit, avec une limite assumée** : `hasOtherApplicationForClient`
+  détecte un doublon de dossier **dans la base IndexedDB locale de ce
+  navigateur** — un vrai proxy honnête, pas une consultation BIC réelle ni
+  une détection multi-agences (qui suppose un backend partagé/Firestore,
+  toujours absent). Le panneau `ExternalChecksPanel.jsx` opérationnalise la
+  recommandation de Prisca d'archiver chaque vérification d'endettement
+  externe (rapport BIC ou vérification manuelle) dans une "bibliothèque"
+  interne (`viability`-like table `external_credit_checks`) — sans jamais
+  prétendre interroger le BIC lui-même.
+
+**Ce qui reste explicitement hors de portée**, à dire tel quel en
+soutenance : la vraie API BIC (contrat BCEAO, coût par requête), la
+détection multi-agences réelle (backend partagé), le bilan comptable complet
+(peu réaliste sur l'informel), et la différenciation fine des critères par
+type de crédit au-delà de la norme de durée (ex. logique agricole
+pluviométrie/site d'exploitation) — documentés ici plutôt que fabriqués.
+
+## 6. TEG — repositionné en fin de flux, toujours séparé du risque
+
+Suite à la confirmation de Prisca ("le taux n'a rien à voir avec
+l'évaluation du risque"), `RegulatoryPanel` (TEG) est déplacé en **dernière
+position** parmi les panneaux de décision dans `App.jsx` : Résultat (score +
+garde-fous) → Vérifications externes → Rentabilité (institution) → **TEG**
+→ Assistant réglementaire (RAG) → Chat. Le calcul lui-même
+(`regulatory/computeTEG.mjs`) est inchangé — seul l'ordre d'affichage
+change, pour refléter que la conformité réglementaire est vérifiée une fois
+la décision de risque prise, jamais un facteur d'entrée de cette décision.

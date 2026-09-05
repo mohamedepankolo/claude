@@ -21,3 +21,11 @@ db.version(1).stores({
 db.version(2).stores({
   viability_results: 'id, application_id, created_at',
 })
+
+// v3 : garde-fous métier (cf. PLAN_RISQUE.md, P0/P1/P2) — `external_credit_checks`
+// est la "bibliothèque" recommandée par Prisca pour archiver les vérifications
+// d'endettement externe (proxy du rapport de solvabilité BIC en l'absence
+// d'intégration réelle à l'API du Bureau d'Information sur le Crédit).
+db.version(3).stores({
+  external_credit_checks: 'id, application_id, created_at',
+})

@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
-import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, saveViabilityResult, listApplications, getApplication, listSyncQueue } from './db/index.js'
+import { applyBusinessGuardrails } from '@scoring/applyBusinessGuardrails.mjs'
+import { initDb, createApplication, saveScoreAndDecision, saveRegulatoryResult, saveViabilityResult, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import DossierForm from './components/DossierForm.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
 import RegulatoryPanel from './components/RegulatoryPanel.jsx'
 import ViabilityPanel from './components/ViabilityPanel.jsx'
+import ExternalChecksPanel from './components/ExternalChecksPanel.jsx'
 import RegulatoryAssistant from './components/RegulatoryAssistant.jsx'
 import ChatPanel from './components/ChatPanel.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -68,7 +70,27 @@ export default function App() {
     try {
       const fields = normalizeBooleans(rawFields)
       const applicationId = await createApplication(fields)
-      const result = scoreCreditApplication({ application_id: applicationId, ...fields })
+      const scoreResult = scoreCreditApplication({ application_id: applicationId, ...fields })
+
+      // Garde-fous métier (PLAN_RISQUE.md, P0/P1/P2) : appliqués APRÈS le
+      // score ML, jamais à sa place — cf. doc de tête de
+      // @scoring/applyBusinessGuardrails. La détection de doublon (P2) est
+      // une vérification locale (ce navigateur), pas une consultation BIC réelle.
+      const duplicate_active_client = await hasOtherApplicationForClient(fields.clientName, applicationId)
+      const result = applyBusinessGuardrails(scoreResult, {
+        montant_demande: fields.montant_demande,
+        revenu_activite: fields.revenu_activite,
+        duree_mois: fields.duree_mois,
+        anciennete_membre_mois: fields.anciennete_membre_mois,
+        endettement_externe_declare: fields.endettement_externe_declare,
+        montant_dernier_credit: fields.montant_dernier_credit,
+        type_credit: fields.type_credit,
+        type_garantie: fields.type_garantie,
+        valeur_garantie: fields.valeur_garantie,
+        pertinence_saisonniere: fields.pertinence_saisonniere,
+        croissance_ventes_pct: fields.croissance_ventes_pct,
+        duplicate_active_client,
+      })
       await saveScoreAndDecision(applicationId, result)
       await refresh()
       await handleSelect(applicationId)
@@ -132,8 +154,12 @@ export default function App() {
         {!showForm && (
           <>
             <ResultPanel dossier={selected} />
-            <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
+            <ExternalChecksPanel dossier={selected} />
             <ViabilityPanel dossier={selected} onCompute={handleComputeViability} />
+            {/* TEG en fin d'évaluation (retour de Prisca, session 3 : le taux
+                n'est jamais un facteur de risque, seulement une vérification
+                de conformité une fois la décision de risque prise). */}
+            <RegulatoryPanel dossier={selected} onCompute={handleComputeTEG} />
             <RegulatoryAssistant />
             <ChatPanel dossier={selected} />
           </>

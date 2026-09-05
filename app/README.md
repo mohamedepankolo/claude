@@ -45,6 +45,12 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   à partir de la probabilité de défaut du dossier (`(100 - score) / 100`).
   Paramètres économiques configurables, tous des placeholders documentés
   (cf. commentaire en tête du fichier). Jamais fusionné avec le TEG.
+- `../scoring/applyBusinessGuardrails.mjs` (aliasé `@scoring`) — **garde-fous
+  métier** appliqués après le score ML (endettement externe déclaré,
+  ancienneté du membre, progressivité du crédit, durée/type de crédit, ratio
+  garantie/montant, pertinence saisonnière, croissance des ventes, doublon
+  de dossier détecté localement). Ne peut que durcir la décision ou réduire
+  le montant recommandé, jamais l'inverse — cf. `PLAN_RISQUE.md`.
 - `src/sync/syncService.js` — file de synchronisation (P1). Ne bloque jamais
   la saisie, conserve les erreurs, permet le retry, évite les doublons (UUID
   stables), état visible (pending/synced/failed). **Utilise un adapter
@@ -72,6 +78,7 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - [x] Montant recommandé, décision suggérée, reason codes
 - [x] **Moteur TEG** : simulation du crédit, conformité au plafond, affichage séparé du score de risque
 - [x] **Moteur de rentabilité** : marge de l'institution, séparée du TEG, persistée dans IndexedDB
+- [x] **Garde-fous métier** (P0/P1/P2, cf. `PLAN_RISQUE.md`) appliqués après le score ML
 - [x] Chatbox pour approfondir la décision (avec repli sans LLM)
 - [x] **Assistant réglementaire RAG** : corpus contrôlé, recherche lexicale, réponse sourcée, repli sans LLM
 - [x] Testé de bout en bout (formulaire → score → TEG → rentabilité → RAG → affichage), y compris

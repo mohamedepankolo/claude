@@ -181,9 +181,29 @@ deux calculs, mais produit une sortie strictement séparée :
   IndexedDB (`viability_results`, `db.version(2)`), testé de bout en bout
   (Playwright) y compris la persistance après rechargement de page.
 
+## 6ter. Garde-fous métier (scoring/applyBusinessGuardrails.mjs) ✅
+
+Suite au retour détaillé de Prisca sur sa méthodologie complète d'évaluation
+du risque (cf. `NOTES_MENTORING_CIF.md` session 3 et `PLAN_RISQUE.md`), une
+couche de règles métier est appliquée **après** `scoreCreditApplication`,
+jamais à sa place : elle ne peut que durcir `decision` et/ou réduire
+`recommended_amount`, jamais l'inverse, et ne touche jamais `score`,
+`confidence`, `risk_level` ni `explanations` du modèle entraîné (le
+"contrat" reste stable). Couvre l'endettement externe déclaré, l'ancienneté
+du membre, la progressivité du crédit (P0), la cohérence durée/type de
+crédit, le ratio garantie/montant, la pertinence saisonnière et la
+croissance des ventes déclarées par l'agent (P1), et un doublon de dossier
+détecté localement — proxy honnête de la vérification BIC/multi-agences,
+pas une intégration réelle (P2). Détail complet, y compris les limites
+explicitement assumées, dans `PLAN_RISQUE.md`.
+
 ## 7. Ce qui reste à faire
 
-- Brancher un vrai adapter Firestore (config du projet Firebase de l'équipe).
+- Brancher un vrai adapter Firestore (config du projet Firebase de l'équipe) —
+  prérequis, entre autres, pour une vraie détection multi-agences.
+- Une vraie intégration BIC (API BCEAO) reste hors de portée technique de ce
+  prototype — `ExternalChecksPanel.jsx` archive les vérifications déjà
+  faites par l'agent, mais n'interroge aucune API.
 - Confirmer avec Prisca/le texte BCEAO le vrai taux d'usure (le plafond TEG
   actuel, 24%, est un placeholder documenté dans `regulatory/computeTEG.mjs`).
 - Démarrer `llama-server` avec le fichier `.gguf` sur la machine de démo.

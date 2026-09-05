@@ -3,6 +3,7 @@ const DECISION_LABEL = { approve: 'Crédit accordable', review: 'À examiner de 
 export default function ResultPanel({ dossier }) {
   if (!dossier) return null
   const explanations = dossier.explanations ?? []
+  const guardrails = dossier.guardrails ?? []
 
   return (
     <div className="card">
@@ -16,7 +17,7 @@ export default function ResultPanel({ dossier }) {
         </div>
       </div>
 
-      <h3>Facteurs de la décision</h3>
+      <h3>Facteurs de la décision (modèle entraîné)</h3>
       <div className="reasons">
         {explanations.map((r) => (
           <div key={r.code} className={`reason reason-${r.direction}`}>
@@ -28,6 +29,23 @@ export default function ResultPanel({ dossier }) {
           </div>
         ))}
       </div>
+
+      {guardrails.length > 0 && (
+        <>
+          <h3>Garde-fous métier <span className="hint">(règles de politique de crédit, appliquées après le score)</span></h3>
+          <div className="reasons">
+            {guardrails.map((g) => (
+              <div key={g.code} className="reason reason-unfavorable reason-guardrail">
+                <span className="reason-tag">!</span>
+                <div className="reason-body">
+                  <div className="reason-label">{g.label}</div>
+                  <div className="reason-detail">{g.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className={`sync-badge sync-${dossier.sync_status}`}>
         {dossier.sync_status === 'synced' ? 'Synchronisé' : dossier.sync_status === 'failed' ? 'Échec de synchronisation' : 'En attente de synchronisation'}
