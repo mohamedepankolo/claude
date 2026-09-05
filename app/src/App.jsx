@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { scoreCreditApplication } from '@scoring/scoreCreditApplication.mjs'
 import { applyBusinessGuardrails } from '@scoring/applyBusinessGuardrails.mjs'
+import { assessDossierQuality } from '@scoring/assessDossierQuality.mjs'
 import { initDb, createApplication, saveScoreAndDecision, hasOtherApplicationForClient, listApplications, getApplication, listSyncQueue } from './db/index.js'
 import { processSyncQueue } from './sync/syncService.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
@@ -118,7 +119,14 @@ export default function App() {
       // @scoring/applyBusinessGuardrails. La détection de doublon (P2) est
       // une vérification locale (ce navigateur), pas une consultation BIC réelle.
       const duplicate_active_client = await hasOtherApplicationForClient(fields.clientName, applicationId)
-      const result = applyBusinessGuardrails(scoreResult, guardrailContext(fields, duplicate_active_client))
+      const guarded = applyBusinessGuardrails(scoreResult, guardrailContext(fields, duplicate_active_client))
+
+      // Qualité du dossier et fiabilité (Lory, Architecture Rev.2 §3) —
+      // remplace l'ancien champ `confidence` (distance au seuil jamais
+      // évaluée statistiquement) par une mesure de complétude/cohérence à
+      // méthode documentée, explicitement distincte du risque prédit.
+      const quality = assessDossierQuality(fields)
+      const result = { ...guarded, ...quality }
       await saveScoreAndDecision(applicationId, result)
       await refresh()
       await handleSelect(applicationId)
@@ -143,10 +151,12 @@ export default function App() {
     if (!selectedId || !selected) return
     const scoreResult = scoreCreditApplication({ application_id: selectedId, ...selected })
     const duplicate_active_client = await hasOtherApplicationForClient(selected.client_name, selectedId)
-    const result = applyBusinessGuardrails(
+    const guarded = applyBusinessGuardrails(
       scoreResult,
       guardrailContext(selected, duplicate_active_client, { endettement_externe_declare: endettementExterneDeclare })
     )
+    const quality = assessDossierQuality({ ...selected, endettement_externe_declare: endettementExterneDeclare })
+    const result = { ...guarded, ...quality }
     await saveScoreAndDecision(selectedId, result)
     await refresh()
     setSelected(await getApplication(selectedId))

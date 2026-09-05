@@ -149,10 +149,42 @@ envoyer un état des lieux réel plutôt que de la laisser croire que rien
 n'est fait — je peux préparer cette fiche de suivi si tu veux la lui
 transmettre.
 
-## Ce que je n'ai PAS fait dans cette passe
+## Décisions prises et mises en œuvre (suite à cette analyse)
 
-Aucun changement de code — uniquement cette analyse. Les deux points de la
-section "⚠️" ci-dessus touchent au contrat de scoring stable et à
-l'affichage principal de la démo : je préfère les trancher avec toi avant
-de coder, plutôt que de deviner dans un sens qui pourrait défaire ce que tu
-viens de me demander, ou ignorer une exigence explicite du cadrage officiel.
+- **TEG** : reste retiré de l'affichage, conformément à la demande explicite
+  du matin — le cadrage de Lory le liste comme preuve de démo attendue,
+  mais le choix a été fait de le garder masqué pour l'instant. Le moteur
+  (`regulatory/computeTEG.mjs`) et le composant (`RegulatoryPanel.jsx`)
+  restent en place, réactivables en une ligne dans `App.jsx` si besoin
+  avant la présentation.
+- **Confiance → qualité du dossier + fiabilité et limites** ✅ construit :
+  `scoring/assessDossierQuality.mjs` (nouveau module pur, 11 tests) calcule
+  une **complétude** (proportion de champs suivis réellement renseignés,
+  cf. `CHAMPS_SUIVIS`) et des **alertes de cohérence** documentées
+  (bénéfice nul/négatif, montant très disproportionné, ancienneté sous le
+  seuil finançable, durée hors plage usuelle, secteur peu représenté dans
+  les données d'entraînement) — jamais une mesure de la probabilité que la
+  prédiction soit correcte, exactement la distinction demandée section 3.
+  Le champ `confidence` reste calculé et stocké (compatibilité), mais n'est
+  plus affiché nulle part dans l'interface. `DossierForm.jsx` transmet
+  désormais `null` (au lieu d'un 0 silencieux) pour les champs réellement
+  laissés vides, afin que "qualité du dossier" puisse les détecter — cf.
+  `scoring/scoreCreditApplication.mjs`, qui appliquait déjà ses propres
+  valeurs par défaut en interne (`?? 35`, `?? 0`...), donc rien ne casse.
+  Vérifié de bout en bout (Playwright) : un dossier avec plusieurs champs
+  vides affiche "Fiabilité et limites" avec chaque champ manquant nommé,
+  et un dossier agricole à montant disproportionné déclenche les deux
+  alertes de cohérence correspondantes.
+
+## Ce qui reste ouvert (pas traité dans cette passe)
+
+- Le **contrôle qualité en amont du scoring** (étapes 2-3 du parcours
+  agent) et l'**abstention** (section 3) restent des vides réels : un
+  dossier incomplet est aujourd'hui quand même scoré (avec les nouvelles
+  alertes de fiabilité affichées à côté), jamais bloqué avant l'évaluation
+  ni redirigé vers une demande de complément explicite. La "qualité du
+  dossier" construite ici est un premier pas (elle rend visible ce qui
+  manque) mais ne bloque rien — à discuter si une vraie abstention doit
+  être ajoutée avant la démo.
+- La fiche de suivi pour Lory (section 14 de son document) n'a pas été
+  préparée — à faire si tu veux la lui transmettre.

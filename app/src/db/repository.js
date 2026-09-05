@@ -83,6 +83,12 @@ export async function saveScoreAndDecision(applicationId, result) {
     score: result.score, risk_level: result.risk_level, confidence: result.confidence,
     recommended_amount: result.recommended_amount, explanations: result.explanations,
     narrative: result.narrative ?? [], created_at: now(),
+    // Qualité du dossier / fiabilité (@scoring/assessDossierQuality) —
+    // remplace `confidence` dans l'affichage (cf. ANALYSE_ARCHITECTURE_LORY_REV2.md) ;
+    // `confidence` reste stocké pour ne pas casser le contrat historique, mais n'est plus rendu.
+    qualite_pct: result.qualite_pct ?? null,
+    champs_manquants: result.champs_manquants ?? [],
+    alertes: result.alertes ?? [],
   })
   const decisionId = uuid()
   await db.credit_decisions.add({
@@ -173,6 +179,7 @@ export async function getApplication(applicationId) {
     ...app,
     client_name: client?.name ?? '—',
     score: score?.score, risk_level: score?.risk_level, confidence: score?.confidence,
+    qualite_pct: score?.qualite_pct ?? null, champs_manquants: score?.champs_manquants ?? [], alertes: score?.alertes ?? [],
     recommended_amount: score?.recommended_amount, explanations: score?.explanations ?? [],
     narrative: score?.narrative ?? [],
     decision: decision?.decision, reason: decision?.reason, guardrails: decision?.guardrails ?? [],

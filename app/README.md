@@ -51,6 +51,12 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   garantie/montant, pertinence saisonnière, croissance des ventes, doublon
   de dossier détecté localement). Ne peut que durcir la décision ou réduire
   le montant recommandé, jamais l'inverse — cf. `PLAN_RISQUE.md`.
+- `../scoring/assessDossierQuality.mjs` (aliasé `@scoring`) — **qualité du
+  dossier et fiabilité** : complétude (champs suivis réellement renseignés)
+  et alertes de cohérence documentées, remplace l'affichage de l'ancien
+  champ `confidence` (distance au seuil jamais évaluée statistiquement) —
+  cf. `ANALYSE_ARCHITECTURE_LORY_REV2.md`. Jamais une mesure de la
+  probabilité que la prédiction soit correcte.
 - `src/sync/syncService.js` — file de synchronisation (P1). Ne bloque jamais
   la saisie, conserve les erreurs, permet le retry, évite les doublons (UUID
   stables), état visible (pending/synced/failed). **Utilise un adapter
