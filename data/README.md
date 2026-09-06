@@ -4,10 +4,70 @@ Fournies par Prisca (expertise métier crédit/microfinance de l'équipe).
 **100% fictives**, générées uniquement pour entraîner et tester le moteur de
 scoring — aucun client réel, aucune donnée personnelle.
 
-- `donnees_completes.csv` — 3000 dossiers, la base d'entraînement (`ml/train_model.py`).
+- `donnees_completes.csv` — 3000 dossiers, la base d'entraînement actuelle du
+  modèle en production (`ml/train_model.py`, `ml/model.json`).
 - `echantillon_40.csv` — 40 dossiers, un extrait relu ligne à ligne par Prisca ;
   sert aussi de fixture de test (`scoring/scoreCreditApplication.test.mjs`).
-- `lexique.csv` — dictionnaire des colonnes.
+- `lexique.csv` — dictionnaire des colonnes (les 30 colonnes de Prisca + les
+  colonnes d'extension et d'identité décrites ci-dessous).
+- `donnees_completes_25000.csv` + `identites_fictives_25000.csv` — jeu de
+  données élargi (25 000 dossiers), cf. section dédiée plus bas.
+
+## Jeu de données élargi (25 000 dossiers)
+
+Généré par `generate_dataset_25000.py` (exécuter depuis la racine du dépôt :
+`python3 data/generate_dataset_25000.py`) à la demande de l'équipe, suite à
+une remarque d'un expert mentor sur l'intérêt d'un plus gros volume. **Sur
+les mêmes paramètres et la même logique** que le fichier de Prisca :
+
+- Les mêmes 30 colonnes, mêmes noms, mêmes formules (`revenu_activite =
+  chiffre_affaires - charges_activite`, etc.).
+- Proportions et distributions calibrées sur celles mesurées directement
+  sur `donnees_completes.csv` (secteur, zone, genre, historique, tontine...).
+- **La colonne `defaut` est calculée avec le modèle réellement entraîné**
+  (`ml/model.json`, mêmes coefficients que `scoring/scoreCreditApplication.mjs`)
+  plutôt qu'une règle réinventée — un dossier synthétique est étiqueté
+  "défaut" avec exactement la même probabilité que ce que l'application
+  calculerait pour lui aujourd'hui. Taux de défaut obtenu : 14,1% (contre
+  12,8% sur les 3000 dossiers d'origine — écart résiduel assumé et
+  documenté dans les commentaires du script, cf. calibrage de
+  `taux_endettement` et `couverture_cashflow`, les deux variables qui
+  pèsent le plus dans le modèle).
+- `montant_demande` est arrondi à des paliers ronds (25 000 à 1 000 000 FCFA
+  selon l'échelle du montant) plutôt qu'un chiffre arbitraire — ex. 1 300 000
+  ou 1 350 000, jamais 1 319 000.
+- **Graine documentée** (`RANDOM_STATE = 20260906`), reproductible — à la
+  différence du fichier d'origine de Prisca, dont la méthode de génération
+  n'est pas connue (cf. "Points encore à confirmer" ci-dessous).
+
+Colonnes d'extension ajoutées (absentes du fichier de Prisca, mais
+réellement saisies dans le formulaire de l'application aujourd'hui —
+garde-fous métier et veille employeur/activité) : `anciennete_membre_mois`,
+`endettement_externe_declare`, `montant_dernier_credit`, `type_credit`,
+`type_garantie`, `valeur_garantie`, `pertinence_saisonniere`,
+`croissance_ventes_pct`, `employeur_nom`. Champs optionnels dans le vrai
+formulaire → laissés vides ici avec un taux de renseignement réaliste
+(jamais 100%), cf. `lexique.csv`.
+
+**`identites_fictives_25000.csv`** donne à la démo la structure d'une vraie
+base cliente (nom, prénom, sexe, date/lieu de naissance, numéro CNIB,
+numéro de téléphone, date d'entretien), jointe à `donnees_completes_25000.csv`
+par `dossier_id`. **100% fictif, aucune donnée réelle** : combinaisons
+aléatoires de prénoms/noms de famille et de villes courants au Burkina Faso
+(aucun lien avec une personne réelle, comme n'importe quel jeu de test
+"Jean Dupont"), numéro CNIB de format illustratif (pas le schéma officiel
+réel), numéro de téléphone au format burkinabè mais tiré au hasard (même
+principe que les numéros "555" factices). **Ce fichier n'est jamais utilisé
+pour le scoring** — même principe que `genre`, déjà exclu du modèle : une
+identité n'entre jamais dans les variables d'entraînement.
+
+**Décision volontairement laissée à l'équipe : ré-entraîner ou non le
+modèle en production sur ce fichier.** `donnees_completes_25000.csv` est
+prêt à être utilisé (`python3 ml/train_model.py` en changeant `DATA_PATH`),
+mais le faire changerait les coefficients du modèle actuellement démontré
+(`ml/model.json`) et donc les scores/décisions affichés dans la démo — pas
+fait automatiquement pour ne pas modifier le comportement de l'application
+sans validation explicite avant une démonstration.
 
 ## Points métier importants (validés par Prisca)
 
