@@ -31,25 +31,40 @@ export const DEFAULT_GUARDRAIL_PARAMS = Object.freeze({
   // P0
   anciennete_membre_min_mois: 6, // symétrique à anciennete_activite_mois
   anciennete_membre_facteur_plafond: 0.7, // plafond du montant recommandé pour un nouveau membre
-  endettement_externe_ratio_max: 1.5, // vs revenu_activite mensuel
+  endettement_externe_ratio_max: 1.5, // vs benefice_activite mensuel
   progressivite_facteur_max: 3, // montant demandé ne doit pas dépasser 3x le dernier crédit
   // P1
   garantie_ratio_min: 0.5, // valeur de la garantie / montant demandé
   croissance_ventes_seuil_pct: -20, // en-dessous, alerte activité en déclin
 })
 
-// Durées usuelles par type de crédit (mois) — cf. PLAN_RISQUE.md §2.7.
-// Simplification assumée : le crédit véhicule salarié (jusqu'à 7 ans côté
-// banque, cité par Prisca) est ramené au plafond productif général (48 mois)
-// pour cette IMF — à confirmer si un vrai produit véhicule existe chez la CIF.
+// Durées usuelles par type de crédit (mois) — catégories alignées sur les
+// produits réels d'un réseau de microfinance au Burkina Faso (RCPB, cf.
+// data/SOURCES_METHODOLOGIE.md). Valeurs indicatives, NON validées par
+// Prisca (pas de grille officielle RCPB recopiée ici) — à confirmer.
 export const DUREE_NORMES_PAR_TYPE = Object.freeze({
-  productif_fonds_roulement: { min: 6, max: 18 },
-  productif_equipement: { min: 12, max: 24 },
-  productif_immobilier: { min: 24, max: 48 },
-  salarie_scolaire: { min: 6, max: 12 },
-  salarie_autre: { min: 6, max: 48 },
-  agricole: { min: 6, max: 24 },
+  credit_agricole: { min: 6, max: 24 }, // calé sur le cycle de campagne
+  credit_commercial: { min: 6, max: 18 },
+  credart_artisans: { min: 6, max: 24 },
+  cfc_femmes_commercantes: { min: 6, max: 18 },
+  credit_communautaire: { min: 6, max: 12 },
+  credit_jeune: { min: 6, max: 24 },
+  avance_salaire: { min: 1, max: 6 }, // remboursement sur les prochains salaires, très court
+  credit_social: { min: 6, max: 12 },
   btp_marche_public: { min: 6, max: 24 },
+})
+
+// Garantie usuellement associée à chaque type de crédit — règle indicative
+// (pas validée par Prisca), utilisée à la fois par le formulaire
+// (app/src/components/DossierForm.jsx, suggestion affichée à l'agent) et
+// par le garde-fou P1.2b ci-dessous (informatif, jamais bloquant).
+export const GARANTIE_RECOMMANDEE_PAR_TYPE = Object.freeze({
+  avance_salaire: 'domiciliation_salaire',
+  credit_social: 'domiciliation_salaire',
+  credit_agricole: 'caution_solidaire',
+  credit_commercial: 'materiel',
+  credart_artisans: 'materiel',
+  cfc_femmes_commercantes: 'caution_solidaire',
 })
 
 const worseOf = (a, b) => (DECISIONS_ORDER[b] > DECISIONS_ORDER[a] ? b : a)
@@ -58,15 +73,15 @@ const worseOf = (a, b) => (DECISIONS_ORDER[b] > DECISIONS_ORDER[a] ? b : a)
  * @param {import('./scoreCreditApplication.mjs').CreditApplicationOutput} scoreResult
  * @param {Object} context
  * @param {number} context.montant_demande
- * @param {number} [context.revenu_activite]
+ * @param {number} [context.benefice_activite]
  * @param {number} [context.duree_mois]
  * @param {number} [context.anciennete_membre_mois]       Ancienneté du membre dans l'institution (≠ ancienneté de l'activité)
  * @param {number} [context.endettement_externe_declare]  FCFA, déclaré par l'agent (P0 — proxy BIC en l'absence d'intégration réelle)
  * @param {number} [context.montant_dernier_credit]       FCFA, dernier crédit soldé/en cours du membre
- * @param {'productif_fonds_roulement'|'productif_equipement'|'productif_immobilier'|'salarie_scolaire'|'salarie_autre'|'agricole'|'btp_marche_public'} [context.type_credit]
+ * @param {'credit_agricole'|'credit_commercial'|'credart_artisans'|'cfc_femmes_commercantes'|'credit_communautaire'|'credit_jeune'|'avance_salaire'|'credit_social'|'btp_marche_public'} [context.type_credit]
  * @param {'aucune'|'foncier'|'vehicule'|'materiel'|'caution_solidaire'|'domiciliation_salaire'} [context.type_garantie]
  * @param {number} [context.valeur_garantie]               FCFA
- * @param {'favorable'|'neutre'|'defavorable'} [context.pertinence_saisonniere]  Jugement déclaré par l'agent (jamais déduit d'une donnée absente)
+ * @param {'favorable'|'neutre'|'defavorable'} [context.pertinence_demande]  Jugement déclaré par l'agent sur le timing de la demande par rapport au cycle de l'activité (jamais déduit d'une donnée absente)
  * @param {number} [context.croissance_ventes_pct]         Variation déclarée du CA, en %
  * @param {boolean} [context.duplicate_active_client]      Un autre dossier actif existe déjà pour ce même client (détection locale)
  * @param {Partial<typeof DEFAULT_GUARDRAIL_PARAMS>} [context.params]
@@ -76,7 +91,7 @@ export function applyBusinessGuardrails(scoreResult, context) {
   if (!scoreResult || typeof scoreResult !== 'object') {
     throw new TypeError('applyBusinessGuardrails: scoreResult requis')
   }
-  const { montant_demande, revenu_activite = 0, duree_mois } = context ?? {}
+  const { montant_demande, benefice_activite = 0, duree_mois } = context ?? {}
   if (!(montant_demande > 0)) throw new TypeError('applyBusinessGuardrails: montant_demande requis (> 0)')
 
   const params = { ...DEFAULT_GUARDRAIL_PARAMS, ...(context.params ?? {}) }
@@ -89,7 +104,7 @@ export function applyBusinessGuardrails(scoreResult, context) {
 
   // P0.1 — endettement externe déclaré (proxy BIC).
   const endettementExterne = context.endettement_externe_declare ?? 0
-  if (endettementExterne > 0 && revenu_activite > 0 && endettementExterne > params.endettement_externe_ratio_max * revenu_activite) {
+  if (endettementExterne > 0 && benefice_activite > 0 && endettementExterne > params.endettement_externe_ratio_max * benefice_activite) {
     escalate('review')
     guardrails.push({
       code: 'endettement_externe_eleve', effect: 'review',
@@ -149,8 +164,18 @@ export function applyBusinessGuardrails(scoreResult, context) {
     }
   }
 
-  // P1.3 — pertinence saisonnière (jugement déclaré par l'agent, jamais déduit).
-  if (context.pertinence_saisonniere === 'defavorable') {
+  // P1.2b — garantie recommandée pour ce type de crédit non déclarée (informatif, non bloquant).
+  const garantieRecommandee = context.type_credit ? GARANTIE_RECOMMANDEE_PAR_TYPE[context.type_credit] : null
+  if (garantieRecommandee && context.type_garantie && context.type_garantie !== garantieRecommandee && context.type_garantie === 'aucune') {
+    guardrails.push({
+      code: 'garantie_recommandee_absente', effect: 'info',
+      label: 'Garantie usuelle non déclarée',
+      detail: `Pour un crédit "${context.type_credit}", la garantie usuelle est "${garantieRecommandee}" — aucune garantie n'est déclarée ici (indicatif, non bloquant).`,
+    })
+  }
+
+  // P1.3 — pertinence de la demande / timing par rapport au cycle de l'activité (jugement déclaré par l'agent, jamais déduit).
+  if (context.pertinence_demande === 'defavorable') {
     escalate('review')
     guardrails.push({
       code: 'timing_defavorable', effect: 'review',

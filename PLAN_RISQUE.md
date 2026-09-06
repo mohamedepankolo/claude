@@ -35,7 +35,7 @@ qu'on modélise réellement aujourd'hui, pour prioriser ce qui reste.
 ⚠️ **Piège de vocabulaire à noter** : le mot "rentabilité" est utilisé pour
 **deux choses différentes** dans ce projet, à ne jamais confondre :
 - la **rentabilité de l'activité du client** (marge de son commerce/atelier —
-  c'est un facteur d'entrée du risque, déjà couvert par `revenu_activite` =
+  c'est un facteur d'entrée du risque, déjà couvert par `benefice_activite` (anciennement `revenu_activite`) =
   `chiffre_affaires − charges_activite` dans le contrat de scoring) ;
 - la **rentabilité du crédit pour l'institution** (marge de la CIF sur ce
   prêt précis — c'est `finance/computeViability.mjs`, un calcul de sortie,
@@ -65,12 +65,12 @@ seulement"*). **Aucune action recommandée ici.**
 | Croissance des ventes | Non modélisé | — (nécessite un historique de CA, pas juste un CA instantané) |
 | Secteur porteur (perspective 5 ans) | Partiellement | `secteur` (catégoriel, pas de score de "porteur") |
 | **Pertinence saisonnière des besoins** | Non modélisé | — (nécessite date de demande + calendrier sectoriel) |
-| **Rentabilité de l'activité du client** | ✅ Couvert | `revenu_activite`, `chiffre_affaires`, `charges_activite` |
+| **Rentabilité de l'activité du client** | ✅ Couvert | `benefice_activite`, `chiffre_affaires`, `charges_activite` |
 
 ### 2.3 Situation financière
 | Sous-élément | État | Variable actuelle |
 |---|---|---|
-| Flux de trésorerie (moyenne vs traite) | Partiellement | `flux_tresorerie_net`, `epargne_mensuelle`, `regularite_epargne` — pas un vrai relevé de mouvements de compte |
+| Flux de trésorerie (moyenne vs traite) | Partiellement | (retirés du modèle depuis le 6 sept. 2026) — pas un vrai relevé de mouvements de compte |
 | Niveau d'endettement externe (autres institutions) | **Non couvert (vide majeur)** | — |
 | Bilan rapide (actif circulant vs dettes) | Non couvert | — (peu réaliste pour l'informel de toute façon) |
 
@@ -138,7 +138,7 @@ le plafond de `recommended_amount` (jamais plus de ~115% du montant demandé).
 1. **Endettement externe déclaré** — un champ simple dans le formulaire
    (montant total déclaré par l'agent après une vérification, même
    manuelle/orale en l'absence d'API BIC réelle). Règle proposée : si ce
-   montant dépasse un seuil (p. ex. le double de `revenu_activite`), forcer
+   montant dépasse un seuil (p. ex. le double de `benefice_activite`), forcer
    `decision` à `review` au minimum, quel que soit le score ML, avec une
    explication dédiée ("endettement externe élevé — vérification
    recommandée"). Prépare aussi le terrain pour une vraie intégration BIC

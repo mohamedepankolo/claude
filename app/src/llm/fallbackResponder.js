@@ -35,7 +35,7 @@ export function fallbackAnswer(question, dossier, inputs) {
     const pct = caMatch ? Number(caMatch[1] || caMatch[2]) : 20
     const nextCA = inputs.chiffre_affaires * (1 + pct / 100)
     const before = scoreCreditApplication({ ...inputs, application_id: 'sim' })
-    const after = scoreCreditApplication({ ...inputs, application_id: 'sim', chiffre_affaires: nextCA, revenu_activite: Math.max(0, nextCA - inputs.charges_activite) })
+    const after = scoreCreditApplication({ ...inputs, application_id: 'sim', chiffre_affaires: nextCA, benefice_activite: Math.max(0, nextCA - inputs.charges_activite) })
     return phraseSimulation(`Avec un chiffre d'affaires en hausse de ${pct}%`, before, after)
   }
 

@@ -16,7 +16,7 @@
  * UI/SQLite pour bénéficier du modèle entraîné.
  *
  * Le modèle est une régression logistique entraînée hors-ligne (ml/train_model.py)
- * sur 3000 dossiers synthétiques (ROC-AUC 0.83 sur jeu de test, cf. ml/METRICS.md),
+ * sur 3000 dossiers synthétiques (ROC-AUC 0.815 sur jeu de test, cf. ml/METRICS.md),
  * exportée dans model.js (coefficients + normalisation). Aucune dépendance
  * Python à l'inférence : uniquement de l'algèbre linéaire, exécutable
  * hors-ligne sur un poste modeste.
@@ -44,22 +44,17 @@ const sigmoid = (z) => 1 / (1 + Math.exp(-z));
  * @property {number} anciennete_activite_mois     Mois (financement possible à partir de 6 mois)
  * @property {number} chiffre_affaires             CA mensuel, FCFA
  * @property {number} charges_activite             Achats + dépenses d'exploitation, FCFA/mois
- * @property {number} [revenu_activite]            Bénéfice = chiffre_affaires - charges_activite (calculé si absent)
- * @property {number} [flux_tresorerie_net]         FCFA/mois (défaut : = revenu_activite)
+ * @property {number} [benefice_activite]          Bénéfice = chiffre_affaires - charges_activite (calculé si absent ; anciennement `revenu_activite`)
  * @property {number} [charges_perso]               FCFA/mois
  * @property {number} montant_demande               FCFA
  * @property {number} duree_mois
- * @property {number} [epargne_mensuelle]           FCFA
- * @property {number} [regularite_epargne]          0-1
- * @property {0|1} [participe_tontine]
- * @property {number} [regularite_tontine]          0-1
  * @property {0|1} [a_historique]
  * @property {number} [nb_credits_anterieurs]
  * @property {number} [nb_retards]
  * @property {0|1} [deja_impaye]
  * @property {0|1} [a_caution]
  * @property {number} [capacite_caution]            0-1
- * @property {number} [score_reputation]            0-1
+ * @property {number} [score_moralite]              0-1 (anciennement `score_reputation`)
  *
  * @typedef {Object} Explanation
  * @property {string} code
@@ -80,18 +75,13 @@ const sigmoid = (z) => 1 / (1 + Math.exp(-z));
 
 const LABELS = {
   taux_endettement: (v) => ({ label: "Taux d'endettement", detail: `Mensualité estimée à ${Math.round(v.mensualite).toLocaleString('fr-FR')} FCFA, soit ${Math.round(v.taux_endettement * 100)}% du bénéfice mensuel.` }),
-  couverture_cashflow: (v) => ({ label: 'Couverture par le flux de trésorerie', detail: `Le flux de trésorerie net couvre ${v.couverture_cashflow.toFixed(1)}x la mensualité.` }),
   anciennete_activite_mois: (v) => ({ label: "Ancienneté de l'activité", detail: `${v.anciennete_activite_mois} mois d'activité déclarés.` }),
-  regularite_tontine: (v) => ({ label: 'Régularité de la tontine', detail: v.participe_tontine ? `Participation à une tontine, régularité ${Math.round(v.regularite_tontine * 100)}%.` : 'Ne participe pas à une tontine.' }),
-  regularite_epargne: (v) => ({ label: "Régularité de l'épargne", detail: `Épargne mensuelle ${Math.round(v.epargne_mensuelle).toLocaleString('fr-FR')} FCFA, régularité ${Math.round(v.regularite_epargne * 100)}%.` }),
   capacite_caution: (v) => ({ label: 'Solidité de la caution', detail: v.a_caution ? `Caution déclarée, solidité estimée à ${Math.round(v.capacite_caution * 100)}%.` : 'Aucune caution déclarée.' }),
-  score_reputation: (v) => ({ label: 'Réputation de terrain', detail: `Évaluation terrain : ${Math.round(v.score_reputation * 100)}/100.` }),
+  score_moralite: (v) => ({ label: 'Score de moralité', detail: `Évaluation terrain : ${Math.round(v.score_moralite * 100)}/100.` }),
   nb_retards: (v) => ({ label: 'Retards de paiement passés', detail: `${v.nb_retards} retard(s) sur l'historique connu.` }),
   deja_impaye: (v) => ({ label: 'Impayé antérieur', detail: v.deja_impaye ? 'Un impayé est enregistré dans l\'historique.' : "Pas d'impayé enregistré." }),
   a_historique: (v) => ({ label: 'Historique de crédit', detail: v.a_historique ? `${v.nb_credits_anterieurs} crédit(s) antérieur(s) chez nous.` : "Primo-demandeur, pas d'historique interne." }),
   nb_credits_anterieurs: (v) => ({ label: 'Crédits antérieurs', detail: `${v.nb_credits_anterieurs} crédit(s) déjà contracté(s).` }),
-  participe_tontine: (v) => ({ label: 'Participation à une tontine', detail: v.participe_tontine ? 'Participe à une tontine.' : 'Ne participe pas à une tontine.' }),
-  epargne_mensuelle: (v) => ({ label: 'Épargne mensuelle', detail: `${Math.round(v.epargne_mensuelle).toLocaleString('fr-FR')} FCFA/mois.` }),
   informel: (v) => ({ label: "Caractère informel de l'activité", detail: v.informel ? 'Activité informelle.' : 'Activité formalisée.' }),
   a_caution: (v) => ({ label: 'Présence d\'une caution', detail: v.a_caution ? 'Une caution est déclarée.' : 'Aucune caution déclarée.' }),
   personnes_a_charge: (v) => ({ label: 'Personnes à charge', detail: `${v.personnes_a_charge} personne(s) à charge.` }),
@@ -111,30 +101,23 @@ export function scoreCreditApplication(input) {
   if (!input.application_id) throw new TypeError('scoreCreditApplication: application_id required');
   if (!input.secteur) throw new TypeError('scoreCreditApplication: secteur required');
 
-  const revenu_activite = input.revenu_activite ?? Math.max(0, (input.chiffre_affaires ?? 0) - (input.charges_activite ?? 0));
-  const flux_tresorerie_net = input.flux_tresorerie_net ?? revenu_activite;
+  const benefice_activite = input.benefice_activite ?? Math.max(0, (input.chiffre_affaires ?? 0) - (input.charges_activite ?? 0));
   const duree_mois = input.duree_mois > 0 ? input.duree_mois : 12;
   const mensualite = input.montant_demande / duree_mois;
-  const taux_endettement = revenu_activite > 0 ? mensualite / revenu_activite : 1;
-  const couverture_cashflow = mensualite > 0 ? flux_tresorerie_net / mensualite : 10;
+  const taux_endettement = benefice_activite > 0 ? mensualite / benefice_activite : 1;
 
   const values = {
     age: input.age ?? 35,
     personnes_a_charge: input.personnes_a_charge ?? 0,
     anciennete_activite_mois: input.anciennete_activite_mois ?? 6,
     taux_endettement,
-    couverture_cashflow,
-    epargne_mensuelle: input.epargne_mensuelle ?? 0,
-    regularite_epargne: input.regularite_epargne ?? 0,
-    participe_tontine: input.participe_tontine ? 1 : 0,
-    regularite_tontine: input.regularite_tontine ?? 0,
     a_historique: input.a_historique ? 1 : 0,
     nb_credits_anterieurs: input.nb_credits_anterieurs ?? 0,
     nb_retards: input.nb_retards ?? 0,
     deja_impaye: input.deja_impaye ? 1 : 0,
     a_caution: input.a_caution ? 1 : 0,
     capacite_caution: input.capacite_caution ?? 0,
-    score_reputation: input.score_reputation ?? 0.5,
+    score_moralite: input.score_moralite ?? 0.5,
     informel: input.informel ? 1 : 0,
     zone: input.zone ?? 'urbain',
     secteur: input.secteur,
@@ -180,17 +163,12 @@ export function scoreCreditApplication(input) {
     confidence = clamp01(1 - Math.abs(p_default - mid) / halfWidth);
   }
 
-  const disposableIncome = Math.max(0, revenu_activite - (input.charges_perso ?? 0));
+  const disposableIncome = Math.max(0, benefice_activite - (input.charges_perso ?? 0));
   let recommended_amount = Math.round((disposableIncome * 0.35 * duree_mois) / 1000) * 1000;
   if (decision === DECISIONS.REJECT) recommended_amount = Math.round((recommended_amount * 0.4) / 1000) * 1000;
   recommended_amount = Math.min(recommended_amount, input.montant_demande > 0 ? input.montant_demande * 1.15 : recommended_amount);
 
-  // `participe_tontine` et `regularite_tontine` portent le même signal
-  // (la régularité est 0 par construction si la personne ne participe pas) ;
-  // n'en afficher qu'un seul évite des facteurs d'explication qui semblent
-  // se contredire ("participe" et "ne participe pas" côte à côte).
   const explanations = contributions
-    .filter((c) => c.code !== 'participe_tontine')
     .filter((c) => Math.abs(c.contribution) > 1e-6)
     .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
     .slice(0, 7)

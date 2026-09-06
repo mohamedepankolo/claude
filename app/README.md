@@ -33,7 +33,7 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   historique, file de synchronisation), API asynchrone (Dexie/IndexedDB).
 - `../scoring/scoreCreditApplication.mjs` (aliasé `@scoring`) — **le
   contrat de scoring** ("Contrat avec Mohamede"), adossé à une régression
-  logistique entraînée sur les 3000 dossiers de Prisca (`../ml/`, ROC-AUC 0.83).
+  logistique entraînée sur les 3000 dossiers de Prisca (`../ml/`, ROC-AUC 0.815).
 - `../regulatory/computeTEG.mjs` (aliasé `@regulatory`) — **le moteur
   réglementaire** : calcule le TEG d'un crédit et sa conformité à un plafond
   configurable (taux d'usure — valeur par défaut 24%, sourcée BCEAO, cf.
@@ -48,7 +48,7 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
 - `../scoring/applyBusinessGuardrails.mjs` (aliasé `@scoring`) — **garde-fous
   métier** appliqués après le score ML (endettement externe déclaré,
   ancienneté du membre, progressivité du crédit, durée/type de crédit, ratio
-  garantie/montant, pertinence saisonnière, croissance des ventes, doublon
+  garantie/montant, pertinence de la demande, croissance des ventes, doublon
   de dossier détecté localement). Ne peut que durcir la décision ou réduire
   le montant recommandé, jamais l'inverse — cf. `PLAN_RISQUE.md`.
 - `../scoring/assessDossierQuality.mjs` (aliasé `@scoring`) — **qualité du

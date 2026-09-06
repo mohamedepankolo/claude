@@ -14,7 +14,7 @@ test('throws without montant_demande', () => {
 
 test('a clean context leaves decision, amount and explanations untouched, guardrails empty', () => {
   const score = baseScore()
-  const out = applyBusinessGuardrails(score, { montant_demande: 300000, revenu_activite: 200000 })
+  const out = applyBusinessGuardrails(score, { montant_demande: 300000, benefice_activite: 200000 })
   assert.equal(out.decision, 'approve')
   assert.equal(out.recommended_amount, 300000)
   assert.equal(out.explanations, score.explanations, 'explanations must be the same reference, never rewritten')
@@ -23,13 +23,13 @@ test('a clean context leaves decision, amount and explanations untouched, guardr
 
 test('guardrails never soften a decision, only harden it (reject stays reject)', () => {
   const score = { ...baseScore(), decision: 'reject' }
-  const out = applyBusinessGuardrails(score, { montant_demande: 300000, endettement_externe_declare: 900000, revenu_activite: 100000 })
+  const out = applyBusinessGuardrails(score, { montant_demande: 300000, endettement_externe_declare: 900000, benefice_activite: 100000 })
   assert.equal(out.decision, 'reject')
   assert.ok(out.guardrails.some((g) => g.code === 'endettement_externe_eleve'))
 })
 
 test('high external debt relative to income escalates approve to review (P0)', () => {
-  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, revenu_activite: 100000, endettement_externe_declare: 200000 })
+  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, benefice_activite: 100000, endettement_externe_declare: 200000 })
   assert.equal(out.decision, 'review')
   assert.equal(out.guardrails[0].code, 'endettement_externe_eleve')
 })
@@ -61,7 +61,7 @@ test('a progressive request (within 3x the last credit) triggers nothing (P0)', 
 })
 
 test('a duration outside the norm for its credit type is flagged informational only, never escalates (P1)', () => {
-  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, duree_mois: 36, type_credit: 'salarie_scolaire' })
+  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, duree_mois: 36, type_credit: 'credit_communautaire' })
   assert.equal(out.decision, 'approve')
   assert.equal(out.guardrails[0].code, 'duree_hors_norme')
 })
@@ -78,13 +78,13 @@ test('no guarantee declared never triggers the guarantee guardrail (P1)', () => 
 })
 
 test('an unfavorable seasonal timing judgment escalates to review (P1)', () => {
-  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, pertinence_saisonniere: 'defavorable' })
+  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, pertinence_demande: 'defavorable' })
   assert.equal(out.decision, 'review')
   assert.equal(out.guardrails[0].code, 'timing_defavorable')
 })
 
 test('a favorable seasonal judgment triggers nothing (P1)', () => {
-  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, pertinence_saisonniere: 'favorable' })
+  const out = applyBusinessGuardrails(baseScore(), { montant_demande: 300000, pertinence_demande: 'favorable' })
   assert.deepEqual(out.guardrails, [])
 })
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { assessDossierQuality, CHAMPS_SUIVIS } from './assessDossierQuality.mjs'
 
 const completDossier = () => ({
-  age: 38, personnes_a_charge: 2, epargne_mensuelle: 20000, regularite_epargne: 0.8,
+  age: 38, personnes_a_charge: 2,
   capacite_caution: 0.7, anciennete_membre_mois: 24, montant_dernier_credit: 200000,
   endettement_externe_declare: 0, valeur_garantie: 500000, croissance_ventes_pct: 5,
   chiffre_affaires: 500000, charges_activite: 200000, montant_demande: 600000,
@@ -22,7 +22,7 @@ test('a fully filled, coherent dossier scores full completeness with no alerts',
 })
 
 test('missing tracked fields (null, as sent by the form when left empty) reduce completeness proportionally', () => {
-  const dossier = { ...completDossier(), age: null, epargne_mensuelle: null }
+  const dossier = { ...completDossier(), age: null, anciennete_membre_mois: null }
   const out = assessDossierQuality(dossier)
   assert.equal(out.champs_manquants.length, 2)
   assert.equal(out.qualite_pct, Math.round(100 * (1 - 2 / CHAMPS_SUIVIS.length)))

@@ -32,14 +32,14 @@ export async function ensureClient(name) {
 
 const APPLICATION_FIELDS = [
   'genre', 'age', 'zone', 'secteur', 'informel', 'personnes_a_charge', 'anciennete_activite_mois',
-  'chiffre_affaires', 'charges_activite', 'revenu_activite', 'flux_tresorerie_net', 'charges_perso',
-  'montant_demande', 'duree_mois', 'epargne_mensuelle', 'regularite_epargne', 'participe_tontine',
-  'regularite_tontine', 'a_historique', 'nb_credits_anterieurs', 'nb_retards', 'deja_impaye',
-  'a_caution', 'capacite_caution', 'score_reputation',
+  'chiffre_affaires', 'charges_activite', 'benefice_activite', 'charges_perso',
+  'montant_demande', 'duree_mois',
+  'a_historique', 'nb_credits_anterieurs', 'nb_retards', 'deja_impaye',
+  'a_caution', 'capacite_caution', 'score_moralite',
   // Garde-fous métier (PLAN_RISQUE.md, P0/P1) — jamais transmis au modèle ML,
   // consommés uniquement par @scoring/applyBusinessGuardrails.
   'anciennete_membre_mois', 'endettement_externe_declare', 'montant_dernier_credit',
-  'type_credit', 'type_garantie', 'valeur_garantie', 'pertinence_saisonniere', 'croissance_ventes_pct',
+  'type_credit', 'type_garantie', 'valeur_garantie', 'pertinence_demande', 'croissance_ventes_pct',
   // Veille employeur/activité (cf. veille/ et db/veilleRepository.js).
   'employeur_nom',
 ]

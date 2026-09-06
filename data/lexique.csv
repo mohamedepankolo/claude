@@ -8,35 +8,38 @@ personnes_a_charge,Personnes à charge
 anciennete_activite_mois,Ancienneté de l'activité (mois) — min 6 (< 6 mois = non financé)
 chiffre_affaires,Chiffre d'affaires mensuel = ensemble des ventes (FCFA)
 charges_activite,"Charges de l'activité : achats de marchandises, dépenses d'exploitation (FCFA)"
-revenu_activite,BÉNÉFICE mensuel = chiffre d'affaires − charges de l'activité (FCFA)
-flux_tresorerie_net,Flux de trésorerie net mensuel (FCFA)
+revenu_activite,"BÉNÉFICE mensuel = chiffre d'affaires − charges de l'activité (FCFA) — colonne du fichier ORIGINAL de Prisca uniquement (donnees_completes.csv). Renommée `benefice_activite` partout ailleurs (25000 lignes, application, modèle) depuis le 6 sept. 2026."
+flux_tresorerie_net,"Flux de trésorerie net mensuel (FCFA) — colonne du fichier ORIGINAL de Prisca uniquement. Retirée du modèle entraîné et du fichier 25000 lignes/de l'application (ne servait qu'à couverture_cashflow, elle-même retirée)."
 charges_perso,Charges personnelles/familiales par mois (FCFA)
 montant_demande,Montant du crédit demandé (FCFA) — de 150 000 à plusieurs centaines de millions (plafond 400 M)
-duree_mois,Durée (mois) — majoritairement 12
-mensualite,Mensualité estimée (FCFA) — CALCULÉE
+duree_mois,"Durée (mois) — majoritairement 12 dans le fichier de Prisca ; dans le fichier 25000 lignes, liée au type_credit choisi (norme usuelle du produit)."
+mensualite,"Mensualité estimée (FCFA) — CALCULÉE. Fichier de Prisca et scoring en production : division simple montant/durée, sans intérêt. Fichier 25000 lignes : calculée AVEC intérêts (amortissement, cf. taux_interet_nominal_pct)."
 taux_endettement,Mensualité / bénéfice — CALCULÉ
-couverture_cashflow,Flux / mensualité (>1 = confortable) — CALCULÉ
-epargne_mensuelle,Épargne mensuelle (FCFA)
-regularite_epargne,Régularité de l'épargne (0 à 1)
-participe_tontine,Participe à une tontine (1/0)
-regularite_tontine,Régularité de la tontine (0 à 1)
+couverture_cashflow,"Flux / mensualité (>1 = confortable) — CALCULÉ. Colonne du fichier ORIGINAL de Prisca uniquement : retirée des variables du modèle entraîné et du fichier 25000 lignes/de l'application (décision d'équipe, 6 sept. 2026)."
+epargne_mensuelle,"Épargne mensuelle (FCFA) — colonne du fichier ORIGINAL de Prisca uniquement : retirée du modèle entraîné et du fichier 25000 lignes/de l'application (décision d'équipe, 6 sept. 2026)."
+regularite_epargne,"Régularité de l'épargne (0 à 1) — colonne du fichier ORIGINAL de Prisca uniquement, retirée (voir epargne_mensuelle)."
+participe_tontine,"Participe à une tontine (1/0) — colonne du fichier ORIGINAL de Prisca uniquement, retirée du modèle entraîné et du fichier 25000 lignes/de l'application (décision d'équipe, 6 sept. 2026)."
+regularite_tontine,"Régularité de la tontine (0 à 1) — colonne du fichier ORIGINAL de Prisca uniquement, retirée (voir participe_tontine)."
 a_historique,A déjà un historique de crédit (1/0)
 nb_credits_anterieurs,Nombre de crédits antérieurs
 nb_retards,Nombre de retards de paiement passés
-deja_impaye,A déjà eu un impayé (1/0)
+deja_impaye,"A déjà eu un impayé (1/0) — un INPUT du modèle (historique connu avant cette demande), à ne pas confondre avec `defaut` (la CIBLE prédite : ce crédit-ci finira-t-il en impayé/retards graves)."
 a_caution,Présence d'une caution / garant (1/0)
 capacite_caution,Solidité de la caution (0 à 1)
-score_reputation,Réputation / comportement financier (0 à 1)
+score_reputation,"Réputation / comportement financier (0 à 1) — colonne du fichier ORIGINAL de Prisca uniquement. Renommée `score_moralite` partout ailleurs (vocabulaire des mentors métier), même valeur/même définition."
 type_probleme,aucun / retards (graves) / impaye (non remboursé)
 defaut,"RÉSULTAT : 1 = impayé OU retards graves, 0 = remboursé correctement"
 dossier_id,"Identifiant du dossier (donnees_completes_25000.csv uniquement) — clé de jointure avec identites_fictives_25000.csv"
 anciennete_membre_mois,"Ancienneté du MEMBRE dans l'institution (≠ ancienneté de l'activité) — champ agent, optionnel"
 endettement_externe_declare,"Endettement déclaré dans d'autres institutions (FCFA) — proxy BIC, champ agent optionnel"
 montant_dernier_credit,"Montant du dernier crédit soldé/en cours chez nous (FCFA) — vide si pas d'historique"
-type_credit,"productif_fonds_roulement / productif_equipement / productif_immobilier / salarie_scolaire / salarie_autre / agricole / btp_marche_public — champ agent optionnel"
-type_garantie,"aucune / foncier / vehicule / materiel / caution_solidaire / domiciliation_salaire — champ agent optionnel"
+type_credit,"credit_agricole / credit_commercial / credart_artisans / cfc_femmes_commercantes / credit_communautaire / credit_jeune / avance_salaire / credit_social / btp_marche_public — catégories alignées sur les produits réels d'un réseau de microfinance au Burkina Faso (RCPB, cf. SOURCES_METHODOLOGIE.md). Disponibilité liée au secteur (ex. credit_agricole seulement si secteur=agriculture) — cf. app/src/components/DossierForm.jsx. Champ agent optionnel."
+benefice_activite,"BÉNÉFICE mensuel = chiffre d'affaires − charges de l'activité (FCFA) — anciennement `revenu_activite` dans le fichier de Prisca."
+score_moralite,"Score de moralité / comportement financier (0 à 1) — anciennement `score_reputation` dans le fichier de Prisca, vocabulaire aligné sur celui des mentors métier."
+taux_interet_nominal_pct,"Taux d'intérêt nominal annuel simulé (%), 25000 lignes uniquement — INDICATIF (pas une grille officielle recopiée), utilisé pour calculer mensualite avec intérêts."
+type_garantie,"aucune / foncier / vehicule / materiel / caution_solidaire / domiciliation_salaire — champ agent optionnel. Une garantie usuelle est suggérée selon le type_credit (indicatif, jamais imposé)."
 valeur_garantie,"Valeur estimée de la garantie (FCFA) — vide si type_garantie=aucune ou non renseigné"
-pertinence_saisonniere,"favorable / neutre / defavorable — jugement de terrain déclaré par l'agent, jamais déduit"
+pertinence_demande,"favorable / neutre / defavorable — jugement de terrain déclaré par l'agent sur le TIMING de la demande par rapport au cycle de l'activité (jamais le secteur lui-même) ; anciennement nommé `pertinence_saisonniere`."
 croissance_ventes_pct,"Variation du chiffre d'affaires déclarée par l'agent (%) — champ optionnel"
 employeur_nom,"Nom de l'employeur déclaré (si salarié) — utilisé par la veille employeur/activité (cf. veille/README.md) ; vide pour un indépendant"
 nom,"IDENTITÉ FICTIVE (identites_fictives_25000.csv uniquement) — nom de famille, 100% inventé"

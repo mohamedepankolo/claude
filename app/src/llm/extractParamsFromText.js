@@ -70,7 +70,6 @@ export const DOSSIER_FIELD_SCHEMA = {
   charges_activite: 'charges/achats mensuels de l\'activité en FCFA, nombre',
   montant_demande: 'montant du crédit demandé en FCFA, nombre',
   duree_mois: 'durée du crédit demandée en mois, nombre',
-  epargne_mensuelle: 'épargne mensuelle déclarée en FCFA, nombre',
   nb_credits_anterieurs: 'nombre de crédits antérieurs, nombre',
   nb_retards: 'nombre de retards de paiement passés, nombre',
   montant_dernier_credit: 'montant du dernier crédit obtenu, en FCFA, nombre',

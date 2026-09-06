@@ -30,22 +30,17 @@ function rowToInput(row, id) {
     anciennete_activite_mois: num('anciennete_activite_mois'),
     chiffre_affaires: num('chiffre_affaires'),
     charges_activite: num('charges_activite'),
-    revenu_activite: num('revenu_activite'),
-    flux_tresorerie_net: num('flux_tresorerie_net'),
+    benefice_activite: num('revenu_activite'), // colonne d'origine de Prisca, renommée côté contrat
     charges_perso: num('charges_perso'),
     montant_demande: num('montant_demande'),
     duree_mois: num('duree_mois'),
-    epargne_mensuelle: num('epargne_mensuelle'),
-    regularite_epargne: num('regularite_epargne'),
-    participe_tontine: num('participe_tontine'),
-    regularite_tontine: num('regularite_tontine'),
     a_historique: num('a_historique'),
     nb_credits_anterieurs: num('nb_credits_anterieurs'),
     nb_retards: num('nb_retards'),
     deja_impaye: num('deja_impaye'),
     a_caution: num('a_caution'),
     capacite_caution: num('capacite_caution'),
-    score_reputation: num('score_reputation'),
+    score_moralite: num('score_reputation'), // colonne d'origine de Prisca, renommée côté contrat
   };
 }
 
@@ -77,9 +72,8 @@ test('a well-off, low-debt-ratio dossier with a clean history scores low risk', 
     application_id: 'good-1', secteur: 'services', zone: 'urbain',
     montant_demande: 300000, duree_mois: 18,
     chiffre_affaires: 1500000, charges_activite: 400000, anciennete_activite_mois: 48,
-    epargne_mensuelle: 100000, regularite_epargne: 0.9, participe_tontine: 1, regularite_tontine: 0.9,
     a_historique: 1, nb_credits_anterieurs: 2, nb_retards: 0, deja_impaye: 0,
-    a_caution: 1, capacite_caution: 0.9, score_reputation: 0.9,
+    a_caution: 1, capacite_caution: 0.9, score_moralite: 0.9,
   });
   assert.equal(out.decision, DECISIONS.APPROVE);
   assert.equal(out.risk_level, RISK_LEVELS.LOW);
@@ -90,9 +84,8 @@ test('a heavily-indebted dossier with a bad repayment history scores high risk',
     application_id: 'bad-1', secteur: 'quincaillerie_materiaux', zone: 'rural',
     montant_demande: 2000000, duree_mois: 6,
     chiffre_affaires: 300000, charges_activite: 270000, anciennete_activite_mois: 8,
-    epargne_mensuelle: 0, regularite_epargne: 0.1, participe_tontine: 0, regularite_tontine: 0,
     a_historique: 1, nb_credits_anterieurs: 1, nb_retards: 6, deja_impaye: 1,
-    a_caution: 0, capacite_caution: 0, score_reputation: 0.2,
+    a_caution: 0, capacite_caution: 0, score_moralite: 0.2,
   });
   assert.equal(out.decision, DECISIONS.REJECT);
   assert.equal(out.risk_level, RISK_LEVELS.HIGH);
@@ -103,9 +96,8 @@ test('confidence approaches 1 for an extremely safe dossier, not a flat ~50%', (
     application_id: 'extreme-safe', secteur: 'services', zone: 'urbain',
     montant_demande: 150000, duree_mois: 24,
     chiffre_affaires: 5000000, charges_activite: 500000, anciennete_activite_mois: 120,
-    epargne_mensuelle: 500000, regularite_epargne: 1, participe_tontine: 1, regularite_tontine: 1,
     a_historique: 1, nb_credits_anterieurs: 5, nb_retards: 0, deja_impaye: 0,
-    a_caution: 1, capacite_caution: 1, score_reputation: 1,
+    a_caution: 1, capacite_caution: 1, score_moralite: 1,
   });
   assert.equal(out.risk_level, RISK_LEVELS.LOW);
   assert.ok(out.confidence > 0.9, `expected confidence > 0.9 for an extreme case, got ${out.confidence}`);

@@ -11,15 +11,27 @@ Choix de modélisation :
   l'utilise uniquement pour l'audit d'équité, avec `zone`, `secteur` et
   `informel`.
 - On modélise sur des RATIOS et indicateurs métier plutôt que sur les
-  montants bruts (chiffre_affaires, montant_demande...) : taux_endettement
-  et couverture_cashflow encodent déjà la capacité de remboursement de
-  façon comparable d'un dossier à l'autre, et évitent qu'un modèle linéaire
-  apprenne un simple effet d'échelle sur les FCFA plutôt qu'un vrai
-  raisonnement de risque. Les montants bruts restent utilisés tels quels
-  pour le calcul du montant soutenable (formule déterministe, pas modélisée).
+  montants bruts (chiffre_affaires, montant_demande...) : `taux_endettement`
+  encode déjà la capacité de remboursement de façon comparable d'un dossier
+  à l'autre, et évite qu'un modèle linéaire apprenne un simple effet
+  d'échelle sur les FCFA plutôt qu'un vrai raisonnement de risque. Les
+  montants bruts restent utilisés tels quels pour le calcul du montant
+  soutenable (formule déterministe, pas modélisée).
 - Régression logistique (scikit-learn, standardisation + L2) : interprétable,
   auditable, cohérente avec "modèle interprétable" mis en avant dans la note
   de présentation de l'équipe.
+
+Révision (retour d'équipe, 6 sept. 2026) — variables retirées et renommées :
+- `couverture_cashflow`, `epargne_mensuelle`, `regularite_epargne`,
+  `participe_tontine`, `regularite_tontine` : retirées des variables du
+  modèle (poids jugés peu déterminants et/ou redondants avec
+  `taux_endettement`, décision d'équipe). Le fichier source de Prisca
+  (`data/donnees_completes.csv`) garde ces colonnes intactes — elles sont
+  simplement ignorées à l'entraînement (`COLONNES_RETIREES` ci-dessous),
+  jamais supprimées de la donnée d'origine.
+- `score_reputation` renommé `score_moralite` pour coller au vocabulaire
+  employé par les mentors métier — même variable, même valeur, nom
+  différent (`COLONNES_RENOMMEES`).
 
 Sortie : ml/model.json (coefficients + normalisation + seuils), consommé par
 scoring/scoreCreditApplication.mjs (aucune dépendance Python nécessaire à
@@ -41,13 +53,16 @@ REPORT_PATH = "ml/METRICS.md"
 SECTEURS = ["commerce_detail", "vente_vivres", "quincaillerie_materiaux", "services", "artisanat", "agriculture"]
 REFERENCE_SECTEUR = "commerce_detail"  # catégorie de référence (absorbée dans l'intercept)
 
+# Renommage/retrait appliqués UNIQUEMENT à l'entraînement — le fichier source
+# de Prisca n'est jamais modifié (cf. docstring ci-dessus).
+COLONNES_RENOMMEES = {"score_reputation": "score_moralite"}
+COLONNES_RETIREES = ["couverture_cashflow", "epargne_mensuelle", "regularite_epargne", "participe_tontine", "regularite_tontine"]
+
 NUMERIC_FEATURES = [
     "age", "personnes_a_charge", "anciennete_activite_mois",
-    "taux_endettement", "couverture_cashflow",
-    "epargne_mensuelle", "regularite_epargne",
-    "participe_tontine", "regularite_tontine",
+    "taux_endettement",
     "a_historique", "nb_credits_anterieurs", "nb_retards", "deja_impaye",
-    "a_caution", "capacite_caution", "score_reputation",
+    "a_caution", "capacite_caution", "score_moralite",
     "informel",
 ]
 
@@ -64,6 +79,7 @@ def build_feature_frame(df):
 
 def main():
     df = pd.read_csv(DATA_PATH)
+    df = df.rename(columns=COLONNES_RENOMMEES).drop(columns=COLONNES_RETIREES)
     y = df["defaut"].astype(int)
     X = build_feature_frame(df)
     feature_names = list(X.columns)

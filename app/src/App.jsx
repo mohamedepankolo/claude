@@ -29,7 +29,7 @@ import './App.css'
 // arrivent en `true`/`false` JS, on les normalise avant stockage ET avant
 // l'appel au moteur de scoring.
 function normalizeBooleans(fields) {
-  const boolKeys = ['informel', 'participe_tontine', 'a_historique', 'deja_impaye', 'a_caution']
+  const boolKeys = ['informel', 'a_historique', 'deja_impaye', 'a_caution']
   const out = { ...fields }
   for (const k of boolKeys) if (k in out) out[k] = out[k] ? 1 : 0
   return out
@@ -42,7 +42,7 @@ function normalizeBooleans(fields) {
 function guardrailContext(fields, duplicate_active_client, overrides = {}) {
   return {
     montant_demande: fields.montant_demande,
-    revenu_activite: fields.revenu_activite,
+    benefice_activite: fields.benefice_activite,
     duree_mois: fields.duree_mois,
     anciennete_membre_mois: fields.anciennete_membre_mois,
     endettement_externe_declare: fields.endettement_externe_declare,
@@ -50,7 +50,7 @@ function guardrailContext(fields, duplicate_active_client, overrides = {}) {
     type_credit: fields.type_credit,
     type_garantie: fields.type_garantie,
     valeur_garantie: fields.valeur_garantie,
-    pertinence_saisonniere: fields.pertinence_saisonniere,
+    pertinence_demande: fields.pertinence_demande,
     croissance_ventes_pct: fields.croissance_ventes_pct,
     duplicate_active_client,
     ...overrides,
@@ -202,7 +202,7 @@ export default function App() {
     // tel quel : les cases à cocher sont stockées normalisées en 0/1
     // (cf. normalizeBooleans) et DossierForm attend de vrais booléens JS
     // pour `checked={...}` — une chaîne "0" serait sinon rendue cochée.
-    const boolKeys = ['informel', 'participe_tontine', 'a_historique', 'deja_impaye', 'a_caution']
+    const boolKeys = ['informel', 'a_historique', 'deja_impaye', 'a_caution']
     const fields = { ...selected, clientName: selected.client_name }
     for (const k of boolKeys) fields[k] = Boolean(selected[k])
     setPrefill(fields)

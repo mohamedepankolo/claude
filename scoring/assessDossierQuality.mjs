@@ -27,8 +27,6 @@
 export const CHAMPS_SUIVIS = [
   ['age', 'Âge du demandeur'],
   ['personnes_a_charge', 'Personnes à charge'],
-  ['epargne_mensuelle', 'Épargne mensuelle'],
-  ['regularite_epargne', "Régularité de l'épargne"],
   ['capacite_caution', 'Solidité de la caution'],
   ['anciennete_membre_mois', "Ancienneté du membre dans l'institution"],
   ['montant_dernier_credit', 'Montant du dernier crédit'],
@@ -55,12 +53,12 @@ export function assessDossierQuality(input) {
   const champs_manquants = CHAMPS_SUIVIS.filter(([key]) => isMissing(input[key])).map(([, label]) => label)
 
   const alertes = []
-  const revenu_activite = input.revenu_activite ?? Math.max(0, (input.chiffre_affaires ?? 0) - (input.charges_activite ?? 0))
+  const benefice_activite = input.benefice_activite ?? Math.max(0, (input.chiffre_affaires ?? 0) - (input.charges_activite ?? 0))
 
-  if (!(revenu_activite > 0)) {
+  if (!(benefice_activite > 0)) {
     alertes.push('Bénéfice mensuel déclaré nul ou négatif — la capacité de remboursement ne peut pas être évaluée de façon fiable.')
   }
-  if (input.montant_demande > 0 && revenu_activite > 0 && input.montant_demande > 50 * revenu_activite) {
+  if (input.montant_demande > 0 && benefice_activite > 0 && input.montant_demande > 50 * benefice_activite) {
     alertes.push('Montant demandé très supérieur au bénéfice mensuel déclaré (plus de 50x) — vérifier la cohérence du dossier.')
   }
   if (typeof input.anciennete_activite_mois === 'number' && input.anciennete_activite_mois < 6) {

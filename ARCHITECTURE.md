@@ -19,7 +19,7 @@ Design de référence pour l'UI : `index-light.html` (choisi par l'équipe).
 ┌──────────────────────────────┐        ┌─────────────┴─────────────┐
 │ scoring/model.js              │───────▶│      APPLICATION REACT     │
 │ (coefficients régression      │ import │  Formulaire / Dossier /   │
-│  logistique, ROC-AUC 0.83)    │        │  Score / TEG / Chat /     │
+│  logistique, ROC-AUC 0.815)    │        │  Score / TEG / Chat /     │
 ├────────────────────────────────┤        │  Online-Offline (app/src)  │
 │ scoring/scoreCreditApplication │◀──────▶│                           │
 │ .mjs — CONTRAT STABLE          │ appel  └─────────────┬─────────────┘
@@ -64,9 +64,9 @@ Lory affiche" et "comment le risque est calculé" (section 6 du premier plan
 de Lory : *"si le modèle évolue, ton application garde le même contrat"*).
 
 - **INPUT** (v2) : les variables réelles validées par Prisca — `chiffre_affaires`,
-  `charges_activite`, `montant_demande`, `duree_mois`, `epargne_mensuelle`,
-  `regularite_tontine`, `a_historique`, `nb_retards`, `capacite_caution`,
-  `score_reputation`, `secteur`, `zone`... (cf. `data/README.md`). `genre` est
+  `charges_activite`, `montant_demande`, `duree_mois`,
+  `a_historique`, `nb_retards`, `capacite_caution`,
+  `score_moralite`, `secteur`, `zone`... (cf. `data/README.md`). `genre` est
   stocké (pour l'audit d'équité) mais **jamais lu par le scoring**.
 - **OUTPUT** : `score` (0-100), `risk_level`, `confidence`, `recommended_amount`,
   `decision`, `explanations[]`, et `narrative[]` (extension pratique).
@@ -81,11 +81,11 @@ Régression logistique entraînée sur `data/donnees_completes.csv` (3000
 dossiers synthétiques de Prisca) : `ml/train_model.py` → `ml/model.json` →
 `scoring/model.js` (copie JS du même contenu, consommée par le contrat).
 
-- **Performance** (jeu de test, 20%) : ROC-AUC **0.83**, Brier **0.092**.
+- **Performance** (jeu de test, 20%) : ROC-AUC **0.815**, Brier **0.093**.
   Détail complet, coefficients et audit d'équité : `ml/METRICS.md`.
 - **Comparé à des modèles plus complexes** (gradient boosting, random forest,
   testés sur les mêmes données) : la régression logistique reste meilleure
-  (0.83 vs 0.78-0.82 de ROC-AUC) — attendu vu la nature des données
+  (0.815 vs 0.78-0.82 de ROC-AUC) — attendu vu la nature des données
   synthétiques (logique métier plutôt linéaire) et la taille de l'échantillon
   d'entraînement (2400 lignes). Pas de gain à sacrifier l'interprétabilité ici.
 - **Équité** : `genre` exclu des features (consigne de Prisca), audité a

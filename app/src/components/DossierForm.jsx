@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GARANTIE_RECOMMANDEE_PAR_TYPE } from '@scoring/applyBusinessGuardrails.mjs'
 
 const SECTEURS = [
   ['commerce_detail', 'Commerce de détail'],
@@ -9,18 +10,50 @@ const SECTEURS = [
   ['agriculture', 'Agriculture'],
 ]
 
-// Champs issus du référentiel complet de Prisca (session de mentoring 3,
-// cf. PLAN_RISQUE.md) — jamais transmis au modèle ML, consommés uniquement
-// par @scoring/applyBusinessGuardrails (garde-fous métier P0/P1).
+// Catégories de crédit alignées sur les produits RÉELLEMENT proposés par un
+// réseau de microfinance au Burkina Faso (RCPB, capture d'écran cif-ao.org,
+// transmise par l'équipe le 6 septembre 2026) — remplace les catégories
+// abstraites précédentes. Jamais transmis au modèle ML, consommés
+// uniquement par @scoring/applyBusinessGuardrails (garde-fous métier P0/P1).
+// Chaque type est disponible seulement pour certains secteurs/profils —
+// cf. `typesCreditDisponibles()` ci-dessous — pour qu'on ne puisse pas
+// choisir un crédit agricole avec un secteur "services", par exemple.
 const TYPES_CREDIT = [
-  ['productif_fonds_roulement', 'Productif — fonds de roulement'],
-  ['productif_equipement', 'Productif — équipement'],
-  ['productif_immobilier', 'Productif — immobilier'],
-  ['salarie_scolaire', 'Salarié — crédit scolaire'],
-  ['salarie_autre', 'Salarié — autre'],
-  ['agricole', 'Agricole'],
+  ['credit_agricole', 'Agricole (intrants, équipements, embouche)'],
+  ['credit_commercial', 'Commercial (inventaire, équipement)'],
+  ['credart_artisans', "Créd'Art — jeunes artisans"],
+  ['cfc_femmes_commercantes', 'Crédit Femmes Commerçantes (CFC)'],
+  ['credit_communautaire', 'Communautaire (crédit de groupe)'],
+  ['credit_jeune', 'Crédit jeune (18-25 ans)'],
+  ['avance_salaire', 'Avance sur salaire'],
+  ['credit_social', 'Crédit social'],
   ['btp_marche_public', 'BTP / marché public'],
 ]
+
+// Secteurs pour lesquels chaque type de crédit a un sens — cf. commentaire
+// ci-dessus. `null` = pas de restriction de secteur (mais d'autres
+// conditions peuvent s'appliquer, cf. `typesCreditDisponibles`).
+const SECTEURS_PAR_TYPE_CREDIT = {
+  credit_agricole: ['agriculture'],
+  credit_commercial: ['commerce_detail', 'vente_vivres', 'quincaillerie_materiaux'],
+  credart_artisans: ['artisanat'],
+  cfc_femmes_commercantes: ['commerce_detail', 'vente_vivres', 'quincaillerie_materiaux'],
+  credit_communautaire: null,
+  credit_jeune: null,
+  avance_salaire: null,
+  credit_social: null,
+  btp_marche_public: null,
+}
+
+function typesCreditDisponibles(secteur, employeurNom) {
+  const estSalarie = Boolean(employeurNom)
+  return TYPES_CREDIT.filter(([v]) => {
+    if ((v === 'avance_salaire' || v === 'credit_social') && !estSalarie) return false
+    const secteursAutorises = SECTEURS_PAR_TYPE_CREDIT[v]
+    return !secteursAutorises || secteursAutorises.includes(secteur)
+  })
+}
+
 const TYPES_GARANTIE = [
   ['aucune', 'Aucune'],
   ['foncier', 'Foncier / PUH / titre foncier'],
@@ -42,28 +75,23 @@ const initial = {
   anciennete_activite_mois: '',
   chiffre_affaires: '',
   charges_activite: '',
-  flux_tresorerie_net: '',
   charges_perso: '',
   montant_demande: '',
   duree_mois: '12',
-  epargne_mensuelle: '',
-  regularite_epargne: '',
-  participe_tontine: false,
-  regularite_tontine: '',
   a_historique: false,
   nb_credits_anterieurs: '',
   nb_retards: '',
   deja_impaye: false,
   a_caution: false,
   capacite_caution: '',
-  score_reputation: '0.7',
+  score_moralite: '0.7',
   anciennete_membre_mois: '',
   endettement_externe_declare: '',
   montant_dernier_credit: '',
-  type_credit: 'productif_fonds_roulement',
+  type_credit: 'credit_commercial',
   type_garantie: 'aucune',
   valeur_garantie: '',
-  pertinence_saisonniere: 'neutre',
+  pertinence_demande: 'neutre',
   croissance_ventes_pct: '',
 }
 
@@ -103,7 +131,7 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
 
     const chiffre_affaires = num(form.chiffre_affaires)
     const charges_activite = num(form.charges_activite)
-    const revenu_activite = Math.max(0, chiffre_affaires - charges_activite)
+    const benefice_activite = Math.max(0, chiffre_affaires - charges_activite)
 
     onSubmit({
       clientName: form.clientName,
@@ -117,29 +145,24 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
       anciennete_activite_mois: num(form.anciennete_activite_mois, 6),
       chiffre_affaires,
       charges_activite,
-      revenu_activite,
-      flux_tresorerie_net: num(form.flux_tresorerie_net, revenu_activite),
+      benefice_activite,
       charges_perso: num(form.charges_perso),
       montant_demande: num(form.montant_demande),
       duree_mois: num(form.duree_mois, 12),
-      epargne_mensuelle: num(form.epargne_mensuelle, null),
-      regularite_epargne: num(form.regularite_epargne, null),
-      participe_tontine: form.participe_tontine,
-      regularite_tontine: num(form.regularite_tontine),
       a_historique: form.a_historique,
       nb_credits_anterieurs: num(form.nb_credits_anterieurs),
       nb_retards: num(form.nb_retards),
       deja_impaye: form.deja_impaye,
       a_caution: form.a_caution,
       capacite_caution: num(form.capacite_caution, form.a_caution ? null : 0),
-      score_reputation: num(form.score_reputation, 0.5),
+      score_moralite: num(form.score_moralite, 0.5),
       anciennete_membre_mois: num(form.anciennete_membre_mois, null),
       endettement_externe_declare: num(form.endettement_externe_declare, null),
       montant_dernier_credit: num(form.montant_dernier_credit, form.a_historique ? null : 0),
       type_credit: form.type_credit,
       type_garantie: form.type_garantie,
       valeur_garantie: num(form.valeur_garantie, form.type_garantie !== 'aucune' ? null : 0),
-      pertinence_saisonniere: form.pertinence_saisonniere,
+      pertinence_demande: form.pertinence_demande,
       croissance_ventes_pct: num(form.croissance_ventes_pct, null),
     })
     setForm(initial)
@@ -174,7 +197,17 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
             </select>
           </label>
           <label>Secteur d'activité
-            <select value={form.secteur} onChange={set('secteur')}>
+            <select
+              value={form.secteur}
+              onChange={(e) => {
+                const secteur = e.target.value
+                setForm((f) => {
+                  const disponibles = typesCreditDisponibles(secteur, f.employeur_nom)
+                  const type_credit = disponibles.some(([v]) => v === f.type_credit) ? f.type_credit : disponibles[0]?.[0] ?? f.type_credit
+                  return { ...f, secteur, type_credit }
+                })
+              }}
+            >
               {SECTEURS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
@@ -197,7 +230,6 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
         <div className="grid2">
           <label>Chiffre d'affaires mensuel (FCFA) <input type="number" min="0" value={form.chiffre_affaires} onChange={set('chiffre_affaires')} required /></label>
           <label>Charges de l'activité (achats, FCFA/mois) <input type="number" min="0" value={form.charges_activite} onChange={set('charges_activite')} /></label>
-          <label>Flux de trésorerie net (FCFA/mois) <input type="number" value={form.flux_tresorerie_net} onChange={set('flux_tresorerie_net')} placeholder="= bénéfice si laissé vide" /></label>
           <label>Charges personnelles (FCFA/mois) <input type="number" min="0" value={form.charges_perso} onChange={set('charges_perso')} /></label>
         </div>
       </fieldset>
@@ -210,9 +242,9 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
               {[6, 9, 12, 18, 24, 36, 48].map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </label>
-          <label>Type de crédit <span className="hint">(détermine la durée usuelle attendue)</span>
+          <label>Type de crédit <span className="hint">(disponible selon le secteur — détermine aussi la durée usuelle attendue)</span>
             <select value={form.type_credit} onChange={set('type_credit')}>
-              {TYPES_CREDIT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {typesCreditDisponibles(form.secteur, form.employeur_nom).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
         </div>
@@ -220,8 +252,8 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
 
       <fieldset><legend>Évaluation terrain <span className="hint">(jugement déclaré par l'agent, pas une donnée du modèle)</span></legend>
         <div className="grid2">
-          <label>Pertinence saisonnière du besoin
-            <select value={form.pertinence_saisonniere} onChange={set('pertinence_saisonniere')}>
+          <label>Pertinence du moment de la demande <span className="hint">le timing par rapport au cycle de l'activité, pas le secteur lui-même</span>
+            <select value={form.pertinence_demande} onChange={set('pertinence_demande')}>
               <option value="favorable">Favorable (avant la période de pointe)</option>
               <option value="neutre">Neutre</option>
               <option value="defavorable">Défavorable (hors cycle de l'activité)</option>
@@ -244,17 +276,6 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
         </div>
       </fieldset>
 
-      <fieldset><legend>Épargne &amp; discipline financière</legend>
-        <div className="grid2">
-          <label>Épargne mensuelle (FCFA) <input type="number" min="0" value={form.epargne_mensuelle} onChange={set('epargne_mensuelle')} /></label>
-          <label>Régularité de l'épargne (0-1) <input type="number" min="0" max="1" step="0.05" value={form.regularite_epargne} onChange={set('regularite_epargne')} /></label>
-          <label className="checkline"><input type="checkbox" checked={form.participe_tontine} onChange={set('participe_tontine')} /> Participe à une tontine</label>
-          {form.participe_tontine && (
-            <label>Régularité de la tontine (0-1) <input type="number" min="0" max="1" step="0.05" value={form.regularite_tontine} onChange={set('regularite_tontine')} /></label>
-          )}
-        </div>
-      </fieldset>
-
       <fieldset><legend>Historique de crédit</legend>
         <label className="checkline"><input type="checkbox" checked={form.a_historique} onChange={set('a_historique')} /> A déjà un historique de crédit chez nous (sinon : primo-demandeur / cold start)</label>
         {form.a_historique && (
@@ -269,14 +290,19 @@ export default function DossierForm({ onSubmit, submitting, prefill }) {
         )}
       </fieldset>
 
-      <fieldset><legend>Garanties &amp; réputation</legend>
+      <fieldset><legend>Garanties &amp; moralité</legend>
         <div className="grid2">
           <label className="checkline"><input type="checkbox" checked={form.a_caution} onChange={set('a_caution')} /> Caution personnelle déclarée</label>
           {form.a_caution && (
             <label>Solidité de la caution (0-1) <input type="number" min="0" max="1" step="0.05" value={form.capacite_caution} onChange={set('capacite_caution')} /></label>
           )}
-          <label>Réputation de terrain (0-1) <input type="number" min="0" max="1" step="0.05" value={form.score_reputation} onChange={set('score_reputation')} /></label>
+          <label>Score de moralité (0-1) <input type="number" min="0" max="1" step="0.05" value={form.score_moralite} onChange={set('score_moralite')} /></label>
           <label>Type de garantie
+            {GARANTIE_RECOMMANDEE_PAR_TYPE[form.type_credit] && (
+              <span className="hint">
+                {' '}usuellement : {TYPES_GARANTIE.find(([v]) => v === GARANTIE_RECOMMANDEE_PAR_TYPE[form.type_credit])?.[1]} pour ce type de crédit (indicatif, non imposé)
+              </span>
+            )}
             <select value={form.type_garantie} onChange={set('type_garantie')}>
               {TYPES_GARANTIE.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
