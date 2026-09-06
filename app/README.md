@@ -36,8 +36,8 @@ Sans lui, le chat et les explications fonctionnent quand même (repli par règle
   logistique entraînée sur les 3000 dossiers de Prisca (`../ml/`, ROC-AUC 0.83).
 - `../regulatory/computeTEG.mjs` (aliasé `@regulatory`) — **le moteur
   réglementaire** : calcule le TEG d'un crédit et sa conformité à un plafond
-  configurable (taux d'usure — valeur par défaut = placeholder à confirmer,
-  cf. commentaire en tête du fichier). Déterministe, jamais piloté par le LLM
+  configurable (taux d'usure — valeur par défaut 24%, sourcée BCEAO, cf.
+  SOURCES_METHODOLOGIE.md et commentaire en tête du fichier). Déterministe, jamais piloté par le LLM
   (règle d'architecture #2 de Lory). Strictement séparé du calcul de rentabilité.
 - `../finance/computeViability.mjs` (aliasé `@finance`) — **le moteur de
   rentabilité** : marge de l'institution sur un crédit (revenus d'intérêts et
@@ -128,7 +128,5 @@ Les 4 moteurs métier de l'architecture de Lory sont désormais tous construits.
 Ce qui reste :
 
 - Brancher un vrai adapter Firebase (Firestore) à la place de `mockRemoteAdapter`.
-- Confirmer la valeur réelle du taux d'usure (plafond TEG) avec Prisca / le
-  texte BCEAO applicable, à la place du placeholder actuel (24%).
 - Démarrer `llama-server` (et `whisper-server` pour l'audio) avec les
   modèles GGUF/GGML sur la machine de démo — cf. `PLAN_INTERFACE_DOCUMENTS.md` §4.

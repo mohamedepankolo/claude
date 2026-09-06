@@ -6,10 +6,14 @@
  *  - `teg-methode-calcul` : documentation réelle de notre propre méthode de
  *    calcul (@regulatory/computeTEG.mjs) — pas une source externe, mais un
  *    contenu honnête sur ce que le moteur fait réellement.
- *  - `taux-usure-a-completer` : un CANEVAS, pas un texte réglementaire
- *    inventé. Le taux d'usure réel doit venir du texte BCEAO applicable —
- *    on ne fabrique jamais de contenu juridique qui pourrait passer pour
- *    authentique.
+ *  - `taux-usure-sfd-bceao-2026` : le taux (24%) et sa date d'entrée en
+ *    vigueur (01/06/2026) sont RÉELS et sourcés (BCEAO, Décision
+ *    n°19/29-12-2025/CM/UMOA — cf. SOURCES_METHODOLOGIE.md, section
+ *    réglementaire) ; on ne recopie en revanche jamais le TEXTE légal
+ *    complet de la décision (les conditions d'application détaillées,
+ *    exclusions de coût, sanctions...) — seulement le fait et sa source,
+ *    jamais de contenu juridique fabriqué ou paraphrasé comme s'il était
+ *    exhaustif.
  *  - `politique-credit-fictive` : un document métier FICTIF, explicitement
  *    demandé comme tel par l'architecture de Lory ("1-2 documents métier
  *    fictifs (politique/procédure de crédit)").
@@ -17,7 +21,7 @@
  *    hackathon "Sources officielles", vérifiés le 5 septembre 2026) vers
  *    les textes BCEAO/UEMOA/GIABA/ONU applicables en LBC/FT et à la
  *    réglementation des SFD. On ne recopie jamais le contenu de ces textes
- *    (même principe que `taux-usure-a-completer` : jamais de contenu
+ *    (même principe que `taux-usure-sfd-bceao-2026` : jamais de contenu
  *    juridique fabriqué) — seulement où les trouver, avec la source exacte.
  */
 
@@ -40,20 +44,18 @@ Ce calcul est entièrement déterministe : à mêmes montant, durée, taux et fr
     `.trim(),
   },
   {
-    id: 'taux-usure-a-completer',
-    title: 'Taux d\'usure applicable — CANEVAS À COMPLÉTER (pas un texte réglementaire)',
+    id: 'taux-usure-sfd-bceao-2026',
+    title: "Taux d'usure applicable aux SFD/institutions de microfinance (UMOA)",
     text: `
-ATTENTION : ce document est un CANEVAS pour la démonstration du prototype, pas le texte réglementaire réel. Il liste ce que le texte BCEAO applicable doit préciser ; il doit être remplacé par le texte exact avant toute utilisation officielle.
+Le taux d'usure applicable aux systèmes financiers décentralisés (SFD) borne, en amont, le coût total qu'un emprunteur peut supporter.
 
-Éléments à renseigner à partir du texte BCEAO réel :
-- Définition exacte du taux d'usure applicable dans l'espace UEMOA.
-- Plafond applicable selon le type d'établissement (banque, système financier décentralisé / microfinance).
-- Plafond applicable selon le type de crédit (consommation, habitat, professionnel, agricole).
-- Éléments de coût qui entrent dans le calcul du TEG selon le texte (intérêts, frais de dossier, assurance emprunteur obligatoire, etc.) et ceux qui en sont explicitement exclus.
-- Périodicité de révision du taux d'usure (annuelle, trimestrielle...) et source officielle de publication.
-- Sanctions applicables en cas de dépassement.
+Valeur en vigueur depuis le 1er juin 2026 : 24% l'an (TAEG) pour les établissements financiers de crédit et les institutions de microfinance (systèmes financiers décentralisés, SFD) dans l'espace UMOA — abaissé de 27% à 24% par la Décision n°19/29-12-2025/CM/UMOA du Conseil des Ministres de l'UMOA (31 décembre 2025). Le plafond applicable aux banques est distinct (14% l'an).
 
-Dans le prototype, le plafond utilisé par le moteur (regulatory/computeTEG.mjs) est une valeur indicative configurable (24% par défaut), clairement documentée comme placeholder. Elle doit être remplacée par la valeur exacte issue du texte ci-dessus dès qu'il est disponible.
+Sources : BCEAO, "Taux d'usure pour les opérations de crédit des SFD dans la zone UMOA" (bceao.int/fr/documents/taux-dusure-pour-les-operations-de-credit-des-sfd-dans-la-zone-umoa) ; Agence Ecofin, "UMOA : le taux de l'usure pour les institutions de microfinance passe à 24% en juin" (agenceecofin.com) — cf. SOURCES_METHODOLOGIE.md pour le détail complet et la date de vérification.
+
+Ce document donne le taux et sa source, pas le texte légal complet de la décision (conditions détaillées de calcul du TEG, éléments de coût exclus, sanctions applicables...) : pour une utilisation officielle, se référer au texte BCEAO original ci-dessus, jamais à un résumé qui pourrait être incomplet.
+
+Dans le prototype, le plafond utilisé par le moteur (regulatory/computeTEG.mjs) reprend cette valeur (24% par défaut, cf. DEFAULT_TAUX_USURE) mais reste un paramètre configurable (\`plafond\`), pas une constante figée — pour absorber un futur recalibrage BCEAO sans modifier le code.
     `.trim(),
   },
   {
@@ -89,7 +91,7 @@ GIABA : l'organisme régional de type GAFI (Groupe d'Action Financière) pour l'
 
 ONU — liste consolidée des sanctions : la liste du Conseil de sécurité contre laquelle un filtrage (screening) se compare avant d'engager une relation avec un client. scsanctions.un.org/consolidated — export exploitable en XML : scsanctions.un.org/resources/xml/en/consolidated.xml
 
-Ce document ne remplace ni le taux d'usure applicable (cf. \`taux-usure-a-completer\`, un sujet distinct — plafond du TEG, pas LBC/FT) ni un vrai contrôle de conformité : c'est un point de départ pour trouver le texte exact, jamais une synthèse de son contenu.
+Ce document ne remplace ni le plafond réglementaire du TEG (sujet distinct, voir le document dédié) ni un vrai contrôle de conformité : c'est un point de départ pour trouver le texte exact, jamais une synthèse de son contenu.
     `.trim(),
   },
 ]

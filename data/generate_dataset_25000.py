@@ -144,11 +144,26 @@ def beta_from_mean_std(mean, std, size):
 # ---------------------------------------------------------------------------
 # 1. Colonnes d'origine (mêmes 30 colonnes que data/donnees_completes.csv)
 # ---------------------------------------------------------------------------
-genre = rng.choice(["F", "M"], size=N, p=[0.553333, 0.446667])
+# Proportions ajustées par rapport au fichier de Prisca (55,3% F / 52,8% informel),
+# à la lumière de sources externes sourcées (cf. SOURCES_METHODOLOGIE.md) :
+# - genre : les femmes représentent ~65% de la clientèle des IMF en Afrique de
+#   l'Ouest (FinDev Gateway / Cairn.info, cf. section "Genre"), contre 75% au
+#   niveau africain global. 62% retenu ici : compromis documenté entre le
+#   fichier d'origine (55,3%) et ce repère régional (65%) — nos montants vont
+#   jusqu'à l'échelle SME/BAOBAB, un segment probablement un peu moins féminin
+#   que le microcrédit associatif très small-ticket où le 65% est mesuré.
+# - informel : l'INSD mesure 93,5% d'emploi informel au niveau national (tous
+#   travailleurs, salariés du formel inclus), contre 52,8% dans le fichier de
+#   Prisca. Écart attendu : un porteur de dossier qui atteint une institution
+#   de microfinance est par construction un peu moins informel que la moyenne
+#   nationale (visibilité économique minimale nécessaire pour être finançable).
+#   68% retenu ici comme compromis documenté, pas une valeur validée au même
+#   titre que les deux bornes citées.
+genre = rng.choice(["F", "M"], size=N, p=[0.62, 0.38])
 age = np.clip(rng.normal(38.05, 8.81, N), 20, 66).round().astype(int)
 zone = rng.choice(["urbain", "rural"], size=N, p=[0.601, 0.399])
 secteur = rng.choice(SECTEURS, size=N, p=SECTEUR_P)
-informel = rng.choice([1, 0], size=N, p=[0.528333, 0.471667])
+informel = rng.choice([1, 0], size=N, p=[0.68, 0.32])
 personnes_a_charge = rng.choice(PERSONNES_A_CHARGE_VALEURS, size=N, p=PERSONNES_A_CHARGE_P)
 
 anciennete_shape, anciennete_scale = 3.42, 11.64  # calibré sur moyenne 39.85 / écart-type 21.54 mesurés

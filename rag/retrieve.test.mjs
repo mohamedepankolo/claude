@@ -12,7 +12,7 @@ test('the corpus produces a non-empty index', () => {
 test('searching "taux d\'usure" surfaces the usury-rate document first', () => {
   const results = search("taux d'usure applicable", index, 3)
   assert.ok(results.length > 0)
-  assert.equal(results[0].source, 'taux-usure-a-completer')
+  assert.equal(results[0].source, 'taux-usure-sfd-bceao-2026')
 });
 
 test('searching "comment est calculé le TEG" surfaces the methodology document', () => {

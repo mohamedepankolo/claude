@@ -12,14 +12,24 @@
  * séparées : un coût interne (serveur, LLM, personnel) ne doit jamais être
  * ajouté ici.
  *
- * ⚠️ DEFAULT_TAUX_USURE ci-dessous est un PLACEHOLDER (24%), pas une valeur
- * réglementaire vérifiée. Conformément à la règle #5 de l'architecture
- * ("les paramètres réglementaires sont versionnés et configurables"), le
- * plafond réel doit être fourni explicitement (`plafond`) dès qu'il est
- * confirmé par Prisca / le texte BCEAO applicable.
+ * DEFAULT_TAUX_USURE = 24% est désormais une valeur RÉGLEMENTAIRE SOURCÉE,
+ * pas un placeholder : la BCEAO a fixé le taux d'usure applicable aux
+ * établissements financiers de crédit et aux institutions de microfinance
+ * à 24% l'an (TAEG), en vigueur depuis le 1er juin 2026 — abaissé de 27% à
+ * 24% par la Décision n°19/29-12-2025/CM/UMOA du Conseil des Ministres de
+ * l'UMOA du 31 décembre 2025. Sources (cf. SOURCES_METHODOLOGIE.md, section
+ * réglementaire) : BCEAO, "Taux d'usure pour les opérations de crédit des
+ * SFD dans la zone UMOA" (bceao.int/fr/documents/taux-dusure-pour-les-
+ * operations-de-credit-des-sfd-dans-la-zone-umoa) ; Agence Ecofin, "UMOA :
+ * le taux de l'usure pour les institutions de microfinance passe à 24% en
+ * juin" (agenceecofin.com). Conformément à la règle #5 de l'architecture
+ * ("les paramètres réglementaires sont versionnés et configurables"), ce
+ * plafond reste un paramètre (`plafond`) — pas une constante figée en dur
+ * dans la logique métier — pour absorber un futur recalibrage BCEAO sans
+ * modifier le code.
  */
 
-export const DEFAULT_TAUX_USURE = 0.24 // PLACEHOLDER — à confirmer, voir le commentaire ci-dessus
+export const DEFAULT_TAUX_USURE = 0.24 // Taux d'usure BCEAO en vigueur (SFD/IMF), depuis le 01/06/2026 — cf. commentaire ci-dessus
 
 /**
  * Mensualité d'un prêt amorti à mensualités constantes. Exportée pour être
